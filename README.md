@@ -84,6 +84,7 @@ Agent 同士の知的な連携方法を Workspace が決めることは原則と
 ## ドキュメント
 
 - [全体アーキテクチャ](docs/architecture.md)
+- [ディレクトリ構造](docs/repository-layout.md)
 - [Kitsune SDK](docs/sdk.md)
 - [Kitsune Workspace](docs/workspace.md)
 - [プラグイン機構](docs/plugins.md)
