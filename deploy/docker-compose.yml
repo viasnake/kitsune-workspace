@@ -103,6 +103,11 @@ services:
     command:
       - TCP-LISTEN:18080,fork,reuseaddr,bind=172.31.241.10
       - TCP:127.0.0.1:8080
+    healthcheck:
+      test: [CMD-SHELL, nc -z 172.31.241.10 18080]
+      interval: 1s
+      timeout: 1s
+      retries: 10
 
   workspace-agent-gateway:
     <<: *hardened
@@ -183,7 +188,6 @@ networks:
         - subnet: 172.31.240.0/24
   kitsune-human-network:
     name: kitsune-human-network
-    internal: true
     ipam:
       config:
         - subnet: 172.31.241.0/24
