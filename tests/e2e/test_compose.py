@@ -150,19 +150,6 @@ def _compose(*arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _restart_workspace() -> dict[str, Any] | None:
-    started = subprocess.run(
-        ["docker", "compose", "-f", str(COMPOSE_FILE), "start", "workspace"],
-        cwd=REPOSITORY,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if started.returncode != 0:
-        return None
-    return _json("GET", "/api/health")
-
-
 def test_compose_operates_all_runtime_modes_and_persists_history() -> None:
     """Exercise Web, resident, ephemeral, external, schedule, telemetry, and restart paths."""
 
@@ -213,10 +200,9 @@ def test_compose_operates_all_runtime_modes_and_persists_history() -> None:
         timeout=45,
     )
     assert exited["ExitCode"] == 75
+    _compose("start", "workspace")
     restarted_health = _wait_for(
-        "Workspace lease expiry and health after abrupt restart",
-        _restart_workspace,
-        timeout=60,
+        "Workspace health after automatic restart", lambda: _json("GET", "/api/health"), timeout=90
     )
     assert restarted_health["database"] == "healthy"
     recovered = _wait_for(

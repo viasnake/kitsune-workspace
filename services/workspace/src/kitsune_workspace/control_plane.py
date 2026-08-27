@@ -177,6 +177,7 @@ class ControlPlane:
         self.monitor_error = None
         self.lease_error = None
         await asyncio.to_thread(self.instance_lock.acquire)
+        self.runtime.mark_workspace_started()
         self._renew_task = asyncio.create_task(
             self._renew_loop(), name="kitsune-instance-lock-renewal"
         )

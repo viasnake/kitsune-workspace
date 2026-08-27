@@ -206,6 +206,13 @@ async def test_heartbeat_loss_marks_external_runtime_lost(
             )
         )
     try:
+        control.runtime.workspace_started_at = utcnow()
+        await control.runtime.monitor()
+        with control.database.session() as session:
+            instance = session.get(RuntimeInstance, instance_id)
+            assert instance is not None and instance.status == "ready"
+
+        control.runtime.workspace_started_at = utcnow() - timedelta(minutes=5)
         await control.runtime.monitor()
         with control.database.session() as session:
             instance = session.get(RuntimeInstance, instance_id)

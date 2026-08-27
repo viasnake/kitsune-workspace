@@ -1341,6 +1341,12 @@ class RuntimeManager:
         self._restart_tasks: set[asyncio.Task[None]] = set()
         self._restart_by_agent: dict[str, asyncio.Task[None]] = {}
         self._outbox_recovery: OutboxRecovery | None = None
+        self.workspace_started_at = utcnow()
+
+    def mark_workspace_started(self) -> None:
+        """Record when this control plane became the active Workspace instance."""
+
+        self.workspace_started_at = utcnow()
 
     def set_outbox_recovery(self, recovery: OutboxRecovery) -> None:
         """Install the trusted SDK outbox recovery boundary owned by the control plane."""
@@ -2328,7 +2334,10 @@ class RuntimeManager:
             else:
                 observation_succeeded = False
         if instance.last_heartbeat_at is not None and not exited:
-            age = now - ensure_aware(instance.last_heartbeat_at)
+            heartbeat_reference = ensure_aware(instance.last_heartbeat_at)
+            if instance.adapter == "external":
+                heartbeat_reference = max(heartbeat_reference, self.workspace_started_at)
+            age = now - heartbeat_reference
             timeout = self._heartbeat_timeout(instance.agent_id)
             if age.total_seconds() > timeout:
                 published_status: str | None = None

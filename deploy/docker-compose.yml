@@ -40,6 +40,7 @@ services:
 
   workspace:
     <<: *hardened
+    restart: on-failure
     container_name: kitsune-workspace
     image: kitsune-workspace:local
     build:
