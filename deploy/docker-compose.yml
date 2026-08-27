@@ -117,6 +117,11 @@ services:
     volumes:
       - ./agent-gateway.conf:/etc/nginx/nginx.conf:ro
       - ./agent-proxy.inc:/etc/nginx/agent-proxy.inc:ro
+    healthcheck:
+      test: [CMD-SHELL, nc -z 172.31.242.10 18081]
+      interval: 1s
+      timeout: 1s
+      retries: 10
 
   external-agent:
     <<: *hardened
@@ -128,7 +133,7 @@ services:
     command: [kitsune, agent, serve, app:app]
     depends_on:
       workspace-agent-gateway:
-        condition: service_started
+        condition: service_healthy
     environment:
       PYTHONPATH: .
       KITSUNE_WORKSPACE_URL: http://kitsune-workspace:18081
