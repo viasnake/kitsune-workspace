@@ -1,0 +1,61 @@
+schema: kitsune.agent
+revision: 1
+
+metadata:
+  id: managed-resident-agent
+  display_name: Managed Resident Agent
+  description: Resident Agent started and operated by the Docker Runtime Adapter.
+  labels:
+    example: managed-resident
+
+spec:
+  runtime:
+    adapter: docker
+    mode: resident
+    desired_state: running
+    restart:
+      policy: on_failure
+      max_attempts: 5
+      backoff_seconds: 2
+      max_backoff_seconds: 30
+      reset_after_seconds: 120
+    docker:
+      image: kitsune-example-agent:local
+      control_port: 8101
+      command: ["kitsune", "agent", "serve", "app:app"]
+      working_directory: /opt/kitsune/examples/managed-resident-agent
+      network: kitsune-agent-network
+      volumes: []
+      memory_limit_bytes: 536870912
+      cpu_limit: 1.0
+      pids_limit: 256
+      privileged: false
+      host_network: false
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: env://OTEL_EXPORTER_OTLP_ENDPOINT
+    secrets: {}
+  invocation:
+    default_handler: investigate
+    max_concurrency: 4
+    queue_capacity: 20
+    queue_policy: queue
+    timeout_seconds: 30
+    cancellation_grace_seconds: 5
+    store_input: true
+    store_output: true
+    retention_days: 30
+    handlers:
+      investigate:
+        max_concurrency: 2
+        queue_capacity: 8
+        queue_policy: queue
+  triggers:
+    - id: manual
+      type: on_demand
+      handler: investigate
+  observability:
+    service_name: managed-resident-agent
+    trace_url_template: ""
+    log_url_template: ""
+  security:
+    agent_token_ref: env://KITSUNE_MANAGED_AGENT_TOKEN

@@ -1,0 +1,6829 @@
+{
+  "components": {
+    "schemas": {
+      "AgentCounts": {
+        "additionalProperties": false,
+        "description": "Dashboard counts grouped by Agent desired or actual state.",
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "running": {
+            "title": "Running",
+            "type": "integer"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "running",
+          "stopped",
+          "failed"
+        ],
+        "title": "AgentCounts",
+        "type": "object"
+      },
+      "AgentDescriptor": {
+        "additionalProperties": false,
+        "description": "Capabilities and build identity reported by one running SDK process.",
+        "properties": {
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "application_version": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Application Version",
+            "type": "string"
+          },
+          "build_revision": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build Revision"
+          },
+          "capabilities": {
+            "additionalProperties": true,
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "framework": {
+            "default": "generic",
+            "maxLength": 255,
+            "title": "Framework",
+            "type": "string"
+          },
+          "handlers": {
+            "items": {
+              "$ref": "#/components/schemas/HandlerDescriptor"
+            },
+            "maxItems": 1000,
+            "title": "Handlers",
+            "type": "array"
+          },
+          "plugins": {
+            "items": {
+              "$ref": "#/components/schemas/PluginDescriptor"
+            },
+            "maxItems": 1000,
+            "title": "Plugins",
+            "type": "array"
+          },
+          "sdk_version": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Sdk Version",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "application_version",
+          "sdk_version",
+          "handlers",
+          "started_at"
+        ],
+        "title": "AgentDescriptor",
+        "type": "object"
+      },
+      "AgentDetail": {
+        "additionalProperties": false,
+        "description": "Complete management view of one Agent Definition and current records.",
+        "properties": {
+          "active_runs": {
+            "title": "Active Runs",
+            "type": "integer"
+          },
+          "actual_state": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentDescriptor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "desired_state": {
+            "$ref": "#/components/schemas/DesiredState"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "handlers": {
+            "items": {
+              "$ref": "#/components/schemas/HandlerView"
+            },
+            "title": "Handlers",
+            "type": "array"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthDetail"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "object"
+          },
+          "last_heartbeat": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "log_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Url"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/AgentManifest"
+          },
+          "plugins": {
+            "items": {
+              "$ref": "#/components/schemas/PluginView"
+            },
+            "title": "Plugins",
+            "type": "array"
+          },
+          "runtime_adapter": {
+            "$ref": "#/components/schemas/RuntimeAdapter"
+          },
+          "runtime_instances": {
+            "items": {
+              "$ref": "#/components/schemas/RuntimeView"
+            },
+            "title": "Runtime Instances",
+            "type": "array"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleView"
+            },
+            "title": "Schedules",
+            "type": "array"
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          },
+          "triggers": {
+            "items": {
+              "$ref": "#/components/schemas/TriggerView"
+            },
+            "title": "Triggers",
+            "type": "array"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageView"
+            },
+            "title": "Usage",
+            "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "agent_id",
+          "display_name",
+          "description",
+          "version",
+          "runtime_adapter",
+          "runtime_mode",
+          "desired_state",
+          "actual_state",
+          "last_heartbeat",
+          "active_runs",
+          "last_run",
+          "labels",
+          "manifest",
+          "descriptor",
+          "handlers",
+          "plugins",
+          "runtime_instances",
+          "triggers",
+          "schedules",
+          "usage",
+          "health",
+          "log_url",
+          "trace_url"
+        ],
+        "title": "AgentDetail",
+        "type": "object"
+      },
+      "AgentHeartbeat": {
+        "additionalProperties": false,
+        "description": "Best-effort liveness report for one Runtime Instance.",
+        "properties": {
+          "active_runs": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Runs",
+            "type": "integer"
+          },
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "runtime_instance_id": {
+            "format": "uuid",
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RuntimeStatus",
+            "default": "ready"
+          }
+        },
+        "required": [
+          "agent_id",
+          "runtime_instance_id",
+          "occurred_at"
+        ],
+        "title": "AgentHeartbeat",
+        "type": "object"
+      },
+      "AgentManifest": {
+        "additionalProperties": false,
+        "description": "Source-of-truth declaration for one logical Agent Application.",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/AgentMetadata"
+          },
+          "revision": {
+            "const": 1,
+            "default": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema": {
+            "const": "kitsune.agent",
+            "default": "kitsune.agent",
+            "title": "Schema",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/AgentSpecification"
+          }
+        },
+        "required": [
+          "metadata",
+          "spec"
+        ],
+        "title": "AgentManifest",
+        "type": "object"
+      },
+      "AgentMetadata": {
+        "additionalProperties": false,
+        "description": "Human-readable metadata for an Agent Definition.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AgentMetadata",
+        "type": "object"
+      },
+      "AgentRegistration": {
+        "additionalProperties": false,
+        "description": "Runtime registration request sent by a resident Agent Application.",
+        "properties": {
+          "control_url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Url"
+          },
+          "descriptor": {
+            "$ref": "#/components/schemas/AgentDescriptor"
+          },
+          "runtime_instance_id": {
+            "format": "uuid",
+            "title": "Runtime Instance Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "descriptor",
+          "runtime_instance_id"
+        ],
+        "title": "AgentRegistration",
+        "type": "object"
+      },
+      "AgentRunAcknowledgement": {
+        "additionalProperties": false,
+        "description": "Notice that an ephemeral Agent accepted its assigned Run.",
+        "properties": {
+          "runtime_instance_id": {
+            "format": "uuid",
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "running",
+            "default": "running",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "runtime_instance_id"
+        ],
+        "title": "AgentRunAcknowledgement",
+        "type": "object"
+      },
+      "AgentRunAssignment": {
+        "additionalProperties": false,
+        "description": "Persisted input and lineage assigned to an ephemeral Agent process.",
+        "properties": {
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "handler": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Handler",
+            "type": "string"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RunSource"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{16,32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "run_id",
+          "agent_id",
+          "handler",
+          "source",
+          "correlation_id"
+        ],
+        "title": "AgentRunAssignment",
+        "type": "object"
+      },
+      "AgentRunBegin": {
+        "additionalProperties": false,
+        "description": "Request from an Agent to persist a self-triggered or child Run.\n\nFor a child Run, ``handler`` names the child operation and need not match a\ncapability in the parent Agent's Handler Descriptor.",
+        "properties": {
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "handler": {
+            "description": "Registered self Handler or child operation name, according to source",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Handler",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "runtime_instance_id": {
+            "format": "uuid",
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "source": {
+            "default": "self",
+            "enum": [
+              "self",
+              "child"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 604800.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{16,32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "agent_id",
+          "runtime_instance_id",
+          "handler"
+        ],
+        "title": "AgentRunBegin",
+        "type": "object"
+      },
+      "AgentSpecification": {
+        "additionalProperties": false,
+        "description": "Desired runtime, invocation, trigger, observability, and security state.",
+        "properties": {
+          "invocation": {
+            "$ref": "#/components/schemas/InvocationConfiguration"
+          },
+          "observability": {
+            "$ref": "#/components/schemas/ObservabilityConfiguration"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RuntimeConfiguration"
+          },
+          "security": {
+            "$ref": "#/components/schemas/SecurityConfiguration"
+          },
+          "triggers": {
+            "items": {
+              "$ref": "#/components/schemas/TriggerDefinition"
+            },
+            "maxItems": 1000,
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "runtime",
+          "invocation",
+          "observability",
+          "security"
+        ],
+        "title": "AgentSpecification",
+        "type": "object"
+      },
+      "AgentSummary": {
+        "additionalProperties": false,
+        "description": "One Agent Definition with its current operational summary.",
+        "properties": {
+          "active_runs": {
+            "title": "Active Runs",
+            "type": "integer"
+          },
+          "actual_state": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "desired_state": {
+            "$ref": "#/components/schemas/DesiredState"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "object"
+          },
+          "last_heartbeat": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime_adapter": {
+            "$ref": "#/components/schemas/RuntimeAdapter"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "agent_id",
+          "display_name",
+          "description",
+          "version",
+          "runtime_adapter",
+          "runtime_mode",
+          "desired_state",
+          "actual_state",
+          "last_heartbeat",
+          "active_runs",
+          "last_run",
+          "labels"
+        ],
+        "title": "AgentSummary",
+        "type": "object"
+      },
+      "AnomalyView": {
+        "additionalProperties": false,
+        "description": "Recent warning or error event shown on the dashboard.",
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/EventSeverity"
+          }
+        },
+        "required": [
+          "id",
+          "severity",
+          "agent_id",
+          "occurred_at",
+          "message"
+        ],
+        "title": "AnomalyView",
+        "type": "object"
+      },
+      "AuditActorType": {
+        "description": "Authenticated subject class responsible for an audited action.",
+        "enum": [
+          "human",
+          "agent",
+          "webhook",
+          "scheduler"
+        ],
+        "title": "AuditActorType",
+        "type": "string"
+      },
+      "AuditOutcome": {
+        "description": "Persisted outcome of an audited control-plane action.",
+        "enum": [
+          "succeeded",
+          "failed",
+          "denied",
+          "created",
+          "duplicate",
+          "misfire_skipped",
+          "overlap_skipped",
+          "queue_full"
+        ],
+        "title": "AuditOutcome",
+        "type": "string"
+      },
+      "AuditRole": {
+        "description": "Effective role attached to an audited human or machine subject.",
+        "enum": [
+          "viewer",
+          "operator",
+          "admin",
+          "agent",
+          "webhook",
+          "scheduler"
+        ],
+        "title": "AuditRole",
+        "type": "string"
+      },
+      "AuditView": {
+        "additionalProperties": false,
+        "description": "Immutable audit record for a control-plane action.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "actor_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actor_type": {
+            "$ref": "#/components/schemas/AuditActorType"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AuditOutcome"
+          },
+          "remote_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Address"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_type": {
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "actor_type",
+          "actor_id",
+          "actor_role",
+          "request_id",
+          "action",
+          "resource_type",
+          "resource_id",
+          "outcome",
+          "remote_address",
+          "details"
+        ],
+        "title": "AuditView",
+        "type": "object"
+      },
+      "AuthMeResponse": {
+        "additionalProperties": false,
+        "description": "Current authenticated human and CSRF session context.",
+        "properties": {
+          "csrf_token": {
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/UserRole"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "name",
+          "roles",
+          "csrf_token"
+        ],
+        "title": "AuthMeResponse",
+        "type": "object"
+      },
+      "DashboardResponse": {
+        "additionalProperties": false,
+        "description": "Workspace dashboard summary assembled from current persisted state.",
+        "properties": {
+          "agents": {
+            "$ref": "#/components/schemas/AgentCounts"
+          },
+          "next_schedules": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleView"
+            },
+            "title": "Next Schedules",
+            "type": "array"
+          },
+          "recent_anomalies": {
+            "items": {
+              "$ref": "#/components/schemas/AnomalyView"
+            },
+            "title": "Recent Anomalies",
+            "type": "array"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/RunCounts"
+          },
+          "usage_today": {
+            "$ref": "#/components/schemas/UsageSummary"
+          }
+        },
+        "required": [
+          "agents",
+          "runs",
+          "usage_today",
+          "recent_anomalies",
+          "next_schedules"
+        ],
+        "title": "DashboardResponse",
+        "type": "object"
+      },
+      "DesiredState": {
+        "description": "Operator-requested lifecycle state for an Agent Definition.",
+        "enum": [
+          "running",
+          "stopped"
+        ],
+        "title": "DesiredState",
+        "type": "string"
+      },
+      "DockerRuntimeConfiguration": {
+        "additionalProperties": false,
+        "description": "Manifest-declared container settings for the Docker Runtime Adapter.",
+        "properties": {
+          "command": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 256,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "control_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1024.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Port"
+          },
+          "cpu_limit": {
+            "default": 1.0,
+            "maximum": 64.0,
+            "minimum": 0.01,
+            "title": "Cpu Limit",
+            "type": "number"
+          },
+          "host_network": {
+            "default": false,
+            "title": "Host Network",
+            "type": "boolean"
+          },
+          "image": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Image",
+            "type": "string"
+          },
+          "memory_limit_bytes": {
+            "default": 536870912,
+            "maximum": 68719476736.0,
+            "minimum": 67108864.0,
+            "title": "Memory Limit Bytes",
+            "type": "integer"
+          },
+          "network": {
+            "title": "Network",
+            "type": "string"
+          },
+          "pids_limit": {
+            "default": 256,
+            "maximum": 32768.0,
+            "minimum": 16.0,
+            "title": "Pids Limit",
+            "type": "integer"
+          },
+          "privileged": {
+            "default": false,
+            "title": "Privileged",
+            "type": "boolean"
+          },
+          "volumes": {
+            "items": {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Volumes",
+            "type": "array"
+          },
+          "working_directory": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working Directory"
+          }
+        },
+        "required": [
+          "image",
+          "network"
+        ],
+        "title": "DockerRuntimeConfiguration",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "description": "Common FastAPI error body returned for documented HTTP failures.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EventBatch": {
+        "additionalProperties": false,
+        "description": "At-least-once event delivery request sent by an SDK.",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/KitsuneEvent"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "EventBatch",
+        "type": "object"
+      },
+      "EventBatchResponse": {
+        "additionalProperties": false,
+        "description": "Count of inserted Events and already-seen Event IDs.",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "duplicates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Duplicates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepted",
+          "duplicates"
+        ],
+        "title": "EventBatchResponse",
+        "type": "object"
+      },
+      "EventSeverity": {
+        "description": "Severity attached to a Kitsune Event.",
+        "enum": [
+          "debug",
+          "info",
+          "warning",
+          "error",
+          "critical"
+        ],
+        "title": "EventSeverity",
+        "type": "string"
+      },
+      "EventView": {
+        "additionalProperties": false,
+        "description": "One deduplicated Event accepted from an Agent.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "runtime_instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Instance Id"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/EventSeverity"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "type",
+          "occurred_at",
+          "received_at",
+          "agent_id",
+          "runtime_instance_id",
+          "run_id",
+          "parent_run_id",
+          "correlation_id",
+          "trace_id",
+          "severity",
+          "payload"
+        ],
+        "title": "EventView",
+        "type": "object"
+      },
+      "ExternalRuntimeConfiguration": {
+        "additionalProperties": false,
+        "description": "Endpoint settings for a Runtime Instance managed outside Workspace.",
+        "properties": {
+          "endpoint": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "heartbeat_timeout_seconds": {
+            "default": 60,
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Heartbeat Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "ExternalRuntimeConfiguration",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HandlerDescriptor": {
+        "additionalProperties": false,
+        "description": "Typed invocation entry point reported by a running SDK.",
+        "properties": {
+          "default_timeout_seconds": {
+            "default": 900,
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Default Timeout Seconds",
+            "type": "integer"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 4096,
+            "title": "Description",
+            "type": "string"
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": true,
+            "title": "Output Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "input_schema",
+          "output_schema"
+        ],
+        "title": "HandlerDescriptor",
+        "type": "object"
+      },
+      "HandlerInvocationConfiguration": {
+        "additionalProperties": false,
+        "description": "Optional manifest admission overrides for one named Handler.",
+        "properties": {
+          "max_concurrency": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Concurrency"
+          },
+          "queue_capacity": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Capacity"
+          },
+          "queue_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "HandlerInvocationConfiguration",
+        "type": "object"
+      },
+      "HandlerView": {
+        "additionalProperties": false,
+        "description": "Registered handler schema plus Manifest-owned admission limits.",
+        "properties": {
+          "default_timeout_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Timeout Seconds"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "max_concurrency": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Concurrency"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "queue_capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Capacity"
+          },
+          "queue_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "input_schema",
+          "output_schema",
+          "default_timeout_seconds",
+          "max_concurrency",
+          "queue_capacity",
+          "queue_policy"
+        ],
+        "title": "HandlerView",
+        "type": "object"
+      },
+      "HealthCheckView": {
+        "additionalProperties": false,
+        "description": "One named health check reported by a runtime.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "unhealthy"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "detail"
+        ],
+        "title": "HealthCheckView",
+        "type": "object"
+      },
+      "HealthDetail": {
+        "additionalProperties": false,
+        "description": "Agent health classification, heartbeat age, and named checks.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "heartbeat_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat Age Seconds"
+          },
+          "status": {
+            "$ref": "#/components/schemas/HealthStatus"
+          }
+        },
+        "required": [
+          "status",
+          "heartbeat_age_seconds",
+          "checks"
+        ],
+        "title": "HealthDetail",
+        "type": "object"
+      },
+      "HealthStatus": {
+        "description": "Observed health classification exposed to operators.",
+        "enum": [
+          "healthy",
+          "degraded",
+          "unhealthy",
+          "unknown"
+        ],
+        "title": "HealthStatus",
+        "type": "string"
+      },
+      "InstanceLockStatus": {
+        "description": "Workspace instance-lease state.",
+        "enum": [
+          "held",
+          "unavailable"
+        ],
+        "title": "InstanceLockStatus",
+        "type": "string"
+      },
+      "InvocationConfiguration": {
+        "additionalProperties": false,
+        "description": "Agent defaults and per-Handler overrides for Run admission and retention.",
+        "properties": {
+          "cancellation_grace_seconds": {
+            "default": 10,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Cancellation Grace Seconds",
+            "type": "number"
+          },
+          "default_handler": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Default Handler",
+            "type": "string"
+          },
+          "handlers": {
+            "maxProperties": 1000,
+            "patternProperties": {
+              "^[a-zA-Z0-9][a-zA-Z0-9._-]*$": {
+                "$ref": "#/components/schemas/HandlerInvocationConfiguration"
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "title": "Handlers",
+            "type": "object"
+          },
+          "max_concurrency": {
+            "default": 1,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000000.0,
+            "title": "Max Concurrency",
+            "type": "integer"
+          },
+          "queue_capacity": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Queue Capacity",
+            "type": "integer"
+          },
+          "queue_policy": {
+            "$ref": "#/components/schemas/QueuePolicy",
+            "default": "queue"
+          },
+          "retention_days": {
+            "default": 30,
+            "exclusiveMinimum": 0.0,
+            "maximum": 36500.0,
+            "title": "Retention Days",
+            "type": "integer"
+          },
+          "store_input": {
+            "default": true,
+            "title": "Store Input",
+            "type": "boolean"
+          },
+          "store_output": {
+            "default": true,
+            "title": "Store Output",
+            "type": "boolean"
+          },
+          "timeout_seconds": {
+            "default": 900,
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "default_handler"
+        ],
+        "title": "InvocationConfiguration",
+        "type": "object"
+      },
+      "KitsuneEvent": {
+        "additionalProperties": false,
+        "description": "Immutable operational fact delivered at least once by event ID.",
+        "properties": {
+          "agent_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "runtime_instance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Instance Id"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/EventSeverity",
+            "default": "info"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{16,32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "type": {
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9_-]*(?:\\.[a-z0-9_-]+)+$",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "occurred_at",
+          "agent_id"
+        ],
+        "title": "KitsuneEvent",
+        "type": "object"
+      },
+      "LogSource": {
+        "description": "Runtime adapter that supplied a log tail.",
+        "enum": [
+          "process",
+          "docker",
+          "external"
+        ],
+        "title": "LogSource",
+        "type": "string"
+      },
+      "LogsResponse": {
+        "additionalProperties": false,
+        "description": "Bounded redacted log tail read from a Runtime Adapter.",
+        "properties": {
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "runtime_instance_id": {
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/LogSource"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "runtime_instance_id",
+          "source",
+          "lines",
+          "truncated"
+        ],
+        "title": "LogsResponse",
+        "type": "object"
+      },
+      "ManifestReloadErrorResponse": {
+        "additionalProperties": false,
+        "description": "Validation errors returned when an atomic Manifest reload is rejected.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Errors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detail",
+          "errors"
+        ],
+        "title": "ManifestReloadErrorResponse",
+        "type": "object"
+      },
+      "ManifestReloadResponse": {
+        "additionalProperties": false,
+        "description": "Atomic Manifest reload result grouped by definition change kind.",
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "loaded": {
+            "title": "Loaded",
+            "type": "integer"
+          },
+          "loaded_at": {
+            "format": "date-time",
+            "title": "Loaded At",
+            "type": "string"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed",
+            "type": "array"
+          },
+          "unchanged": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unchanged",
+            "type": "array"
+          },
+          "updated": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Updated",
+            "type": "array"
+          }
+        },
+        "required": [
+          "loaded",
+          "added",
+          "updated",
+          "removed",
+          "unchanged",
+          "loaded_at"
+        ],
+        "title": "ManifestReloadResponse",
+        "type": "object"
+      },
+      "ObservabilityConfiguration": {
+        "additionalProperties": false,
+        "description": "Service identity and operator links for logs and traces.",
+        "properties": {
+          "log_url_template": {
+            "default": "",
+            "title": "Log Url Template",
+            "type": "string"
+          },
+          "service_name": {
+            "minLength": 1,
+            "title": "Service Name",
+            "type": "string"
+          },
+          "trace_url_template": {
+            "default": "",
+            "title": "Trace Url Template",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_name"
+        ],
+        "title": "ObservabilityConfiguration",
+        "type": "object"
+      },
+      "OperationResponse": {
+        "additionalProperties": false,
+        "description": "Asynchronous lifecycle or credential-revocation acknowledgement.",
+        "properties": {
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OperationStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "OperationResponse",
+        "type": "object"
+      },
+      "OperationStatus": {
+        "description": "Acknowledgement state for asynchronous control operations.",
+        "enum": [
+          "accepted",
+          "revoked"
+        ],
+        "title": "OperationStatus",
+        "type": "string"
+      },
+      "OverlapPolicy": {
+        "description": "Behavior when a schedule fires while an earlier Run is active.",
+        "enum": [
+          "allow",
+          "skip",
+          "queue",
+          "replace"
+        ],
+        "title": "OverlapPolicy",
+        "type": "string"
+      },
+      "PluginDescriptor": {
+        "additionalProperties": false,
+        "description": "Plugin identity reported in an Agent Descriptor.",
+        "properties": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "PluginDescriptor",
+        "type": "object"
+      },
+      "PluginStatus": {
+        "description": "Capability-report status for a registered plugin.",
+        "enum": [
+          "reported"
+        ],
+        "title": "PluginStatus",
+        "type": "string"
+      },
+      "PluginView": {
+        "additionalProperties": false,
+        "description": "Registered SDK plugin capability.",
+        "properties": {
+          "critical": {
+            "default": false,
+            "title": "Critical",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PluginStatus",
+            "default": "reported"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PluginView",
+        "type": "object"
+      },
+      "ProcessRuntimeConfiguration": {
+        "additionalProperties": false,
+        "description": "Manifest-declared command for the Process Runtime Adapter.",
+        "properties": {
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Command",
+            "type": "array"
+          },
+          "control_url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Url"
+          },
+          "working_directory": {
+            "anyOf": [
+              {
+                "format": "path",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working Directory"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "ProcessRuntimeConfiguration",
+        "type": "object"
+      },
+      "QueuePolicy": {
+        "description": "Behavior when all Handler concurrency slots are occupied.",
+        "enum": [
+          "queue",
+          "reject"
+        ],
+        "title": "QueuePolicy",
+        "type": "string"
+      },
+      "RegistrationResponse": {
+        "additionalProperties": false,
+        "description": "Accepted Agent descriptor and current Runtime Instance identity.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "runtime_instance_id": {
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          }
+        },
+        "required": [
+          "agent_id",
+          "runtime_instance_id",
+          "status"
+        ],
+        "title": "RegistrationResponse",
+        "type": "object"
+      },
+      "RestartConfiguration": {
+        "additionalProperties": false,
+        "description": "Restart and crash-loop settings for a managed Runtime Instance.",
+        "properties": {
+          "backoff_seconds": {
+            "default": 5,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Backoff Seconds",
+            "type": "number"
+          },
+          "max_attempts": {
+            "default": 5,
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "max_backoff_seconds": {
+            "default": 300,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Max Backoff Seconds",
+            "type": "number"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/RestartPolicy",
+            "default": "on_failure"
+          },
+          "reset_after_seconds": {
+            "default": 300,
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Reset After Seconds",
+            "type": "number"
+          }
+        },
+        "title": "RestartConfiguration",
+        "type": "object"
+      },
+      "RestartPolicy": {
+        "description": "Policy applied when a managed Runtime Instance exits.",
+        "enum": [
+          "never",
+          "on_failure",
+          "always"
+        ],
+        "title": "RestartPolicy",
+        "type": "string"
+      },
+      "RunCounts": {
+        "additionalProperties": false,
+        "description": "Dashboard counts for active and failed Runs.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "failed"
+        ],
+        "title": "RunCounts",
+        "type": "object"
+      },
+      "RunCreateRequest": {
+        "additionalProperties": false,
+        "description": "Operator request to create an on-demand Run.",
+        "properties": {
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "handler": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handler"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          }
+        },
+        "title": "RunCreateRequest",
+        "type": "object"
+      },
+      "RunError": {
+        "additionalProperties": false,
+        "description": "Sanitized typed error recorded for a failed Run.",
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ],
+        "title": "RunError",
+        "type": "object"
+      },
+      "RunSource": {
+        "description": "Immediate cause that created a Run.",
+        "enum": [
+          "on_demand",
+          "schedule",
+          "webhook",
+          "self",
+          "child"
+        ],
+        "title": "RunSource",
+        "type": "string"
+      },
+      "RunStatus": {
+        "description": "Lifecycle state of one Run.",
+        "enum": [
+          "created",
+          "queued",
+          "dispatching",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "timed_out"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunSummary": {
+        "additionalProperties": false,
+        "description": "Compact latest-Run record embedded in an Agent summary.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "handler": {
+            "title": "Handler",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RunSource"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "agent_id",
+          "handler",
+          "source",
+          "status",
+          "created_at",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "description": "Persisted Run state, lineage, outcome, usage, and operator links.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "children": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Children"
+          },
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "handler": {
+            "title": "Handler",
+            "type": "string"
+          },
+          "input": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "log_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Url"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "queued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queued At"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "runtime_instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Instance Id"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RunSource"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          },
+          "trigger_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Id"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageView"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "agent_id",
+          "runtime_instance_id",
+          "handler",
+          "source",
+          "trigger_id",
+          "parent_run_id",
+          "correlation_id",
+          "trace_id",
+          "status",
+          "input",
+          "output",
+          "created_at",
+          "queued_at",
+          "started_at",
+          "ended_at",
+          "deadline",
+          "error",
+          "log_url",
+          "trace_url"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "RuntimeAdapter": {
+        "description": "Mechanism used to start or register a Runtime Instance.",
+        "enum": [
+          "process",
+          "docker",
+          "external"
+        ],
+        "title": "RuntimeAdapter",
+        "type": "string"
+      },
+      "RuntimeConfiguration": {
+        "additionalProperties": false,
+        "description": "Desired Runtime Adapter, lifetime, and launch configuration.",
+        "properties": {
+          "adapter": {
+            "$ref": "#/components/schemas/RuntimeAdapter"
+          },
+          "desired_state": {
+            "$ref": "#/components/schemas/DesiredState",
+            "default": "running"
+          },
+          "docker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DockerRuntimeConfiguration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "environment": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Environment",
+            "type": "object"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalRuntimeConfiguration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "process": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessRuntimeConfiguration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restart": {
+            "$ref": "#/components/schemas/RestartConfiguration"
+          },
+          "secrets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Secrets",
+            "type": "object"
+          }
+        },
+        "required": [
+          "adapter",
+          "mode"
+        ],
+        "title": "RuntimeConfiguration",
+        "type": "object"
+      },
+      "RuntimeCounts": {
+        "additionalProperties": false,
+        "description": "Workspace health counts for notable Runtime states.",
+        "properties": {
+          "lost": {
+            "title": "Lost",
+            "type": "integer"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "integer"
+          },
+          "unhealthy": {
+            "title": "Unhealthy",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ready",
+          "unhealthy",
+          "lost"
+        ],
+        "title": "RuntimeCounts",
+        "type": "object"
+      },
+      "RuntimeMode": {
+        "description": "Lifetime pattern of an Agent Application process.",
+        "enum": [
+          "resident",
+          "ephemeral"
+        ],
+        "title": "RuntimeMode",
+        "type": "string"
+      },
+      "RuntimeStatus": {
+        "description": "Observed lifecycle state of one Runtime Instance.",
+        "enum": [
+          "pending",
+          "starting",
+          "ready",
+          "unhealthy",
+          "stopping",
+          "stopped",
+          "failed",
+          "lost"
+        ],
+        "title": "RuntimeStatus",
+        "type": "string"
+      },
+      "RuntimeView": {
+        "additionalProperties": false,
+        "description": "One concrete managed or externally registered Runtime Instance.",
+        "properties": {
+          "adapter": {
+            "$ref": "#/components/schemas/RuntimeAdapter"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Container Id"
+          },
+          "control_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Url"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "health_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Url"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Exit Code"
+          },
+          "last_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat At"
+          },
+          "log_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Url"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "pid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pid"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready At"
+          },
+          "restart_attempts": {
+            "title": "Restart Attempts",
+            "type": "integer"
+          },
+          "runtime_instance_id": {
+            "title": "Runtime Instance Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
+          "stopped_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped At"
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          }
+        },
+        "required": [
+          "runtime_instance_id",
+          "agent_id",
+          "adapter",
+          "mode",
+          "status",
+          "pid",
+          "container_id",
+          "endpoint",
+          "control_url",
+          "health_url",
+          "log_url",
+          "trace_url",
+          "restart_attempts",
+          "started_at",
+          "ready_at",
+          "stopped_at",
+          "last_heartbeat_at",
+          "last_exit_code",
+          "last_error",
+          "metadata"
+        ],
+        "title": "RuntimeView",
+        "type": "object"
+      },
+      "ScheduleOutcome": {
+        "description": "Persisted result of one schedule cursor dispatch attempt.",
+        "enum": [
+          "created",
+          "duplicate",
+          "misfire_skipped",
+          "overlap_skipped",
+          "queue_full"
+        ],
+        "title": "ScheduleOutcome",
+        "type": "string"
+      },
+      "ScheduleView": {
+        "additionalProperties": false,
+        "description": "Materialized schedule and its persistent dispatch cursor.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "cron": {
+            "title": "Cron",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "handler": {
+            "title": "Handler",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_fire_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Fire At"
+          },
+          "last_outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "misfire_grace_seconds": {
+            "title": "Misfire Grace Seconds",
+            "type": "integer"
+          },
+          "next_fire_at": {
+            "format": "date-time",
+            "title": "Next Fire At",
+            "type": "string"
+          },
+          "overlap": {
+            "$ref": "#/components/schemas/OverlapPolicy"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "trigger_id": {
+            "title": "Trigger Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "trigger_id",
+          "handler",
+          "cron",
+          "timezone",
+          "overlap",
+          "misfire_grace_seconds",
+          "enabled",
+          "next_fire_at",
+          "last_fire_at",
+          "last_outcome"
+        ],
+        "title": "ScheduleView",
+        "type": "object"
+      },
+      "SchedulerStatus": {
+        "description": "Control-plane scheduler loop state.",
+        "enum": [
+          "running",
+          "error"
+        ],
+        "title": "SchedulerStatus",
+        "type": "string"
+      },
+      "SecurityConfiguration": {
+        "additionalProperties": false,
+        "description": "Agent authentication settings held by an Agent Definition.",
+        "properties": {
+          "agent_token_ref": {
+            "title": "Agent Token Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_token_ref"
+        ],
+        "title": "SecurityConfiguration",
+        "type": "object"
+      },
+      "TokenIssueRequest": {
+        "additionalProperties": false,
+        "description": "Admin request to issue a revocable Agent bearer credential.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "title": "TokenIssueRequest",
+        "type": "object"
+      },
+      "TokenIssueResponse": {
+        "additionalProperties": false,
+        "description": "One-time plaintext Agent credential issue response.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "credential_id": {
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id",
+          "agent_id",
+          "token",
+          "issued_at",
+          "expires_at"
+        ],
+        "title": "TokenIssueResponse",
+        "type": "object"
+      },
+      "TokenView": {
+        "additionalProperties": false,
+        "description": "Credential metadata that never exposes the stored token hash.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "credential_id": {
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "credential_id",
+          "agent_id",
+          "description",
+          "issued_at",
+          "expires_at",
+          "last_used_at",
+          "revoked_at"
+        ],
+        "title": "TokenView",
+        "type": "object"
+      },
+      "TriggerDefinition": {
+        "additionalProperties": false,
+        "description": "Manifest-declared cause that may create a Run.",
+        "properties": {
+          "cron": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cron"
+          },
+          "handler": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+            "title": "Handler",
+            "type": "string"
+          },
+          "hmac_header": {
+            "default": "X-Kitsune-Signature",
+            "title": "Hmac Header",
+            "type": "string"
+          },
+          "hmac_secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hmac Secret Ref"
+          },
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "idempotency_header": {
+            "default": "Idempotency-Key",
+            "title": "Idempotency Header",
+            "type": "string"
+          },
+          "max_request_bytes": {
+            "default": 1048576,
+            "exclusiveMinimum": 0.0,
+            "maximum": 268435456.0,
+            "title": "Max Request Bytes",
+            "type": "integer"
+          },
+          "misfire_grace_seconds": {
+            "default": 300,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Misfire Grace Seconds",
+            "type": "integer"
+          },
+          "overlap": {
+            "$ref": "#/components/schemas/OverlapPolicy",
+            "default": "skip"
+          },
+          "rate_limit_per_minute": {
+            "default": 60,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000000.0,
+            "title": "Rate Limit Per Minute",
+            "type": "integer"
+          },
+          "shared_secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Secret Ref"
+          },
+          "timezone": {
+            "default": "UTC",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TriggerType"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "handler"
+        ],
+        "title": "TriggerDefinition",
+        "type": "object"
+      },
+      "TriggerType": {
+        "description": "Manifest trigger type that can create a Run.",
+        "enum": [
+          "on_demand",
+          "schedule",
+          "webhook",
+          "self",
+          "child"
+        ],
+        "title": "TriggerType",
+        "type": "string"
+      },
+      "TriggerView": {
+        "additionalProperties": false,
+        "description": "Manifest trigger materialized for management inspection.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "cron": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cron"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "handler": {
+            "title": "Handler",
+            "type": "string"
+          },
+          "overlap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverlapPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "trigger_id": {
+            "title": "Trigger Id",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TriggerType"
+          }
+        },
+        "required": [
+          "trigger_id",
+          "agent_id",
+          "type",
+          "handler",
+          "enabled",
+          "cron",
+          "timezone",
+          "overlap"
+        ],
+        "title": "TriggerView",
+        "type": "object"
+      },
+      "UsageSummary": {
+        "additionalProperties": false,
+        "description": "Aggregate provider-reported model usage over a selected period.",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "estimated_cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Estimated Cost",
+            "type": "string"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "request_count": {
+            "title": "Request Count",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_count",
+          "input_tokens",
+          "output_tokens",
+          "total_tokens",
+          "estimated_cost",
+          "currency"
+        ],
+        "title": "UsageSummary",
+        "type": "object"
+      },
+      "UsageView": {
+        "additionalProperties": false,
+        "description": "One persisted provider-reported usage record.",
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "cache_read_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Read Tokens"
+          },
+          "cache_write_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Write Tokens"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "request_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Count"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "total_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "agent_id",
+          "provider",
+          "model",
+          "request_count",
+          "input_tokens",
+          "output_tokens",
+          "total_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "estimated_cost",
+          "currency",
+          "recorded_at"
+        ],
+        "title": "UsageView",
+        "type": "object"
+      },
+      "UserRole": {
+        "description": "Human Workspace authorization role.",
+        "enum": [
+          "viewer",
+          "operator",
+          "admin"
+        ],
+        "title": "UserRole",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkspaceHealthResponse": {
+        "additionalProperties": false,
+        "description": "Database, lease, scheduler, and Runtime readiness summary.",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/HealthStatus"
+          },
+          "instance_lock": {
+            "$ref": "#/components/schemas/InstanceLockStatus"
+          },
+          "runtimes": {
+            "$ref": "#/components/schemas/RuntimeCounts"
+          },
+          "scheduler": {
+            "$ref": "#/components/schemas/SchedulerStatus"
+          },
+          "status": {
+            "$ref": "#/components/schemas/HealthStatus"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "instance_lock",
+          "scheduler",
+          "runtimes",
+          "timestamp"
+        ],
+        "title": "WorkspaceHealthResponse",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AgentBearer": {
+        "bearerFormat": "Kitsune Agent token",
+        "description": "Bearer token issued for one Agent.",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "SessionCookie": {
+        "description": "Signed Workspace session cookie used when auth.mode is oidc; auth.mode=none uses the loopback development boundary.",
+        "in": "cookie",
+        "name": "kitsune_session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Control plane for manifest-defined Agent Applications.",
+    "title": "Kitsune Workspace API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/admin/reload": {
+      "post": {
+        "operationId": "reload_manifests_api_admin_reload_post",
+        "parameters": [
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestReloadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestReloadErrorResponse"
+                }
+              }
+            },
+            "description": "Manifest reload validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Reload Manifests",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/tokens": {
+      "get": {
+        "operationId": "list_tokens_api_admin_tokens_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TokenView"
+                  },
+                  "title": "Response List Tokens Api Admin Tokens Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Tokens",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "issue_token_api_admin_tokens_post",
+        "parameters": [
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenIssueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Issue Token",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/tokens/{credential_id}": {
+      "delete": {
+        "operationId": "revoke_token_api_admin_tokens__credential_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "title": "Credential Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Revoke Token",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/agent/events/batch": {
+      "post": {
+        "operationId": "agent_events_api_agent_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Agent Events",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/heartbeat": {
+      "post": {
+        "operationId": "agent_heartbeat_api_agent_heartbeat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentHeartbeat"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Agent Heartbeat",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/register": {
+      "post": {
+        "operationId": "register_agent_api_agent_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Register Agent",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/runs/begin": {
+      "post": {
+        "operationId": "agent_run_begin_api_agent_runs_begin_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunBegin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunAssignment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Agent Run Begin",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/runs/{run_id}/ack": {
+      "post": {
+        "operationId": "agent_run_ack_api_agent_runs__run_id__ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunAcknowledgement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Agent Run Ack",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agent/runs/{run_id}/input": {
+      "get": {
+        "operationId": "agent_run_input_api_agent_runs__run_id__input_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunAssignment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "AgentBearer": []
+          }
+        ],
+        "summary": "Agent Run Input",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/agents": {
+      "get": {
+        "operationId": "list_agents_api_agents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentSummary"
+                  },
+                  "title": "Response List Agents Api Agents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Agents",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}": {
+      "get": {
+        "operationId": "get_agent_api_agents__agent_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Get Agent",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/handlers": {
+      "get": {
+        "operationId": "list_handlers_api_agents__agent_id__handlers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HandlerView"
+                  },
+                  "title": "Response List Handlers Api Agents  Agent Id  Handlers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Handlers",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/restart": {
+      "post": {
+        "operationId": "restart_agent_api_agents__agent_id__restart_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Restart Agent",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/runs": {
+      "post": {
+        "operationId": "create_run_api_agents__agent_id__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Create Run",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/runtime-instances": {
+      "get": {
+        "operationId": "list_runtime_instances_api_agents__agent_id__runtime_instances_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 1000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeView"
+                  },
+                  "title": "Response List Runtime Instances Api Agents  Agent Id  Runtime Instances Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Runtime Instances",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/start": {
+      "post": {
+        "operationId": "start_agent_api_agents__agent_id__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Start Agent",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/agents/{agent_id}/stop": {
+      "post": {
+        "operationId": "stop_agent_api_agents__agent_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Stop Agent",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "operationId": "list_audit_api_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditView"
+                  },
+                  "title": "Response List Audit Api Audit Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Audit",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "auth_logout_api_auth_logout_post",
+        "parameters": [
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Auth Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "auth_me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Auth Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "operationId": "dashboard_api_dashboard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Dashboard",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "workspace_health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Workspace Health",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "operationId": "list_runs_api_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "agent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "correlation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parent_run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  "title": "Response List Runs Api Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Runs",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Get Run",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_api_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required when auth.mode=oidc for browser mutations; ignored when auth.mode=none.",
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Cancel Run",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runs/{run_id}/events": {
+      "get": {
+        "operationId": "run_events_api_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventView"
+                  },
+                  "title": "Response Run Events Api Runs  Run Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Run Events",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runs/{run_id}/usage": {
+      "get": {
+        "operationId": "run_usage_api_runs__run_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsageView"
+                  },
+                  "title": "Response Run Usage Api Runs  Run Id  Usage Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Run Usage",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/runtime-instances/{runtime_instance_id}/logs": {
+      "get": {
+        "operationId": "runtime_logs_api_runtime_instances__runtime_instance_id__logs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runtime_instance_id",
+            "required": true,
+            "schema": {
+              "title": "Runtime Instance Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tail",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Tail",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Runtime Logs",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/schedules": {
+      "get": {
+        "operationId": "list_schedules_api_schedules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleView"
+                  },
+                  "title": "Response List Schedules Api Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "List Schedules",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/api/stream": {
+      "get": {
+        "operationId": "stream_api_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          },
+          {}
+        ],
+        "summary": "Stream",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/hooks/{agent_id}/{trigger_id}": {
+      "post": {
+        "operationId": "webhook_hooks__agent_id___trigger_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trigger_id",
+            "required": true,
+            "schema": {
+              "title": "Trigger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "FastAPI error response"
+          }
+        },
+        "summary": "Webhook",
+        "tags": [
+          "webhook"
+        ]
+      }
+    }
+  }
+}

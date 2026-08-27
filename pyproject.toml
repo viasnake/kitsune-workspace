@@ -1,0 +1,72 @@
+[project]
+name = "kitsune-monorepo"
+version = "1.0.0"
+description = "Development workspace for the Kitsune SDK and control plane"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "hypothesis>=6.138.0",
+  "pyright>=1.1.410,!=1.1.411",
+  "pytest>=9.0.3",
+  "pytest-asyncio>=1.1.0",
+  "pytest-cov>=6.2.0",
+  "ruff>=0.12.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "packages/kitsune-contracts",
+  "packages/kitsune-sdk",
+  "packages/kitsune-integration-pydantic-ai",
+  "packages/kitsune-integration-langchain",
+  "packages/kitsune-plugin-budget",
+  "packages/kitsune-plugin-langfuse",
+  "services/workspace",
+]
+
+[tool.uv.sources]
+kitsune-contracts = { workspace = true }
+kitsune-sdk = { workspace = true }
+kitsune-integration-pydantic-ai = { workspace = true }
+kitsune-integration-langchain = { workspace = true }
+kitsune-plugin-budget = { workspace = true }
+kitsune-plugin-langfuse = { workspace = true }
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["packages", "services/workspace/tests", "tests"]
+markers = [
+  "e2e: requires the running Docker Compose completion environment",
+  "postgresql: requires KITSUNE_TEST_POSTGRES_URL",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["apps/workspace-web", "services/workspace/static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["packages", "services/workspace/src", "examples"]
+exclude = ["**/__pycache__", "services/workspace/static"]
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,7 +1,0 @@
-[project]
-name = "kitsune-mock"
-version = "0.0.0"
-requires-python = ">=3.11"
-
-[tool.setuptools]
-packages = ["kitsune_mock", "examples"]

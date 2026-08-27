@@ -1,0 +1,60 @@
+schema: kitsune.agent
+revision: 1
+
+metadata:
+  id: scheduled-ephemeral-agent
+  display_name: Scheduled Ephemeral Agent
+  description: Ephemeral Agent started for each scheduled Run.
+  labels:
+    example: scheduled-ephemeral
+
+spec:
+  runtime:
+    adapter: docker
+    mode: ephemeral
+    desired_state: running
+    restart:
+      policy: never
+      max_attempts: 0
+      backoff_seconds: 0
+      max_backoff_seconds: 0
+      reset_after_seconds: 60
+    docker:
+      image: kitsune-example-agent:local
+      command: ["kitsune", "agent", "once", "app:app"]
+      working_directory: /opt/kitsune/examples/scheduled-ephemeral-agent
+      network: kitsune-agent-network
+      volumes: []
+      memory_limit_bytes: 536870912
+      cpu_limit: 1.0
+      pids_limit: 256
+      privileged: false
+      host_network: false
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: env://OTEL_EXPORTER_OTLP_ENDPOINT
+      KITSUNE_SHUTDOWN_GRACE_SECONDS: env://KITSUNE_SHUTDOWN_GRACE_SECONDS
+    secrets: {}
+  invocation:
+    default_handler: refresh
+    max_concurrency: 2
+    queue_capacity: 10
+    queue_policy: queue
+    timeout_seconds: 30
+    cancellation_grace_seconds: 5
+    store_input: true
+    store_output: true
+    retention_days: 30
+  triggers:
+    - id: frequent-refresh
+      type: schedule
+      handler: refresh
+      cron: "* * * * *"
+      timezone: UTC
+      overlap: skip
+      misfire_grace_seconds: 30
+  observability:
+    service_name: scheduled-ephemeral-agent
+    trace_url_template: ""
+    log_url_template: ""
+  security:
+    agent_token_ref: env://KITSUNE_EPHEMERAL_AGENT_TOKEN

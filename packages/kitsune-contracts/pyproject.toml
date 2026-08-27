@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kitsune-contracts"
+version = "1.0.0"
+description = "Shared Pydantic contracts for Kitsune SDK and Workspace"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+  "pydantic>=2.10,<3",
+  "PyYAML>=6.0.2,<7",
+]
+
+[project.optional-dependencies]
+test = [
+  "hypothesis>=6.125",
+  "pytest>=9.0.3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kitsune_contracts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src"]
