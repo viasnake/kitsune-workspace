@@ -752,16 +752,20 @@ def test_event_outbox_never_chmods_preexisting_or_shared_parent_directories(
 ) -> None:
     parent = tmp_path / "caller-owned"
     parent.mkdir(mode=0o755)
+    parent.chmod(0o755)
     before = stat.S_IMODE(parent.stat().st_mode)
 
     outbox = EventOutbox(parent / "events.sqlite3")
 
     assert stat.S_IMODE(parent.stat().st_mode) == before == 0o755
     assert stat.S_IMODE(outbox.path.stat().st_mode) == 0o600
-    workspace_mode = stat.S_IMODE(Path.cwd().stat().st_mode)
+    shared_directory = tmp_path / "shared"
+    shared_directory.mkdir()
+    shared_directory.chmod(0o777)
+    workspace_mode = stat.S_IMODE(shared_directory.stat().st_mode)
     with pytest.raises(RuntimeError, match="group/world-writable"):
-        require_private_outbox_directory(Path.cwd())
-    assert stat.S_IMODE(Path.cwd().stat().st_mode) == workspace_mode
+        require_private_outbox_directory(shared_directory)
+    assert stat.S_IMODE(shared_directory.stat().st_mode) == workspace_mode
     temporary_mode = stat.S_IMODE(Path("/tmp").stat().st_mode)
     with pytest.raises(RuntimeError, match=r"not owned|group/world-writable"):
         require_private_outbox_directory(Path("/tmp"))

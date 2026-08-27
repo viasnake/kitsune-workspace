@@ -106,7 +106,7 @@ def test_live_postgresql_migration_registry_run_and_lock(
         stale = InstanceLock(database, "workspace:postgresql-stale", 30)
         current = InstanceLock(database, "workspace:postgresql-stale", 30)
         stale.acquire()
-        with database.session() as session:
+        with database.session(fence=False) as session:
             lock = session.get(WorkspaceLock, stale.name)
             assert lock is not None
             lock.expires_at = utcnow() - timedelta(seconds=1)

@@ -204,6 +204,7 @@ def test_workspace_sqlite_never_chmods_preexisting_or_shared_parent_directories(
 ) -> None:
     parent = tmp_path / "caller-owned"
     parent.mkdir(mode=0o755)
+    parent.chmod(0o755)
     before = stat.S_IMODE(parent.stat().st_mode)
 
     database = Database(f"sqlite:///{parent / 'workspace.sqlite3'}")
@@ -212,10 +213,13 @@ def test_workspace_sqlite_never_chmods_preexisting_or_shared_parent_directories(
         assert stat.S_IMODE((parent / "workspace.sqlite3").stat().st_mode) == 0o600
     finally:
         database.dispose()
-    workspace_mode = stat.S_IMODE(Path.cwd().stat().st_mode)
+    shared_directory = tmp_path / "shared"
+    shared_directory.mkdir()
+    shared_directory.chmod(0o777)
+    workspace_mode = stat.S_IMODE(shared_directory.stat().st_mode)
     with pytest.raises(RuntimeError, match="group/world-writable"):
-        database_module._require_private_directory(Path.cwd())
-    assert stat.S_IMODE(Path.cwd().stat().st_mode) == workspace_mode
+        database_module._require_private_directory(shared_directory)
+    assert stat.S_IMODE(shared_directory.stat().st_mode) == workspace_mode
     shared_temporary = Path("/tmp")  # noqa: S108 - assert the real shared parent is untouched
     temporary_mode = stat.S_IMODE(shared_temporary.stat().st_mode)
     with pytest.raises(RuntimeError, match=r"not owned|group/world-writable"):
