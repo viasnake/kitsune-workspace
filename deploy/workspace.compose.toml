@@ -2,7 +2,7 @@
 name = "compose"
 bind = "127.0.0.1:8080"
 public_url = "http://127.0.0.1:8080"
-agent_url = "http://kitsune-workspace:18081"
+agent_url = "http://workspace-human-gateway:18081"
 database_url = "postgresql+psycopg://kitsune:kitsune@postgres:5432/kitsune"
 agent_manifest_directory = "/etc/kitsune/agents"
 runtime_state_directory = "/var/lib/kitsune/runtime"
