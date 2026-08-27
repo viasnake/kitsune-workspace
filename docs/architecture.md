@@ -1,140 +1,60 @@
-# 全体アーキテクチャ
+# アーキテクチャ
 
-## 1. 基本的な考え方
-
-Kitsune は一つの巨大な AI Agent Framework ではない。
-
-開発時と運用時の課題を分ける。
+Kitsune は、Agent Application 内で動く Kitsune SDK と、Agent の外側で動く Kitsune Workspace に分かれます。Pydantic AI、LangChain、独自実装による推論処理は Agent Application が所有します。Workspace は Agent の通信プロキシや推論エンジンにはなりません。
 
 ```mermaid
 flowchart TB
-    subgraph Development[開発]
+    subgraph Agent[Agent Application]
+        Logic[Prompt / Tool / MCP / RAG / Domain Logic]
+        Framework[Pydantic AI / LangChain / Async Callable]
         SDK[Kitsune SDK]
-        P[Pydantic AI / LangChain / Custom]
-        T[Agent 固有 Tool / MCP / RAG]
-        SDK --> P
-        P --> T
+        SDK --> Framework
+        Framework --> Logic
     end
 
-    subgraph Runtime[Agent Application]
-        A[Specialized AI Agent]
+    subgraph Workspace[Kitsune Workspace]
+        Registry[Agent Registry]
+        Runtime[Runtime Manager]
+        Scheduler[Scheduler / Webhook]
+        Runs[Run Manager]
+        Store[Event / Usage / Audit Store]
+        API[REST API / SSE]
+        Web[Operations Web UI]
+        Registry --> Runtime
+        Scheduler --> Runs
+        Runs --> Runtime
+        Store --> API
+        API --> Web
     end
 
-    subgraph Operations[運用]
-        W[Kitsune Workspace]
-        R[Agent Registry]
-        H[実行履歴 / 状態]
-        U[Web UI]
-        W --> R
-        W --> H
-        W --> U
-    end
-
-    Development --> A
-    A --> W
+    SDK <-->|HTTP / JSON| API
+    Runtime --> Agent
+    Agent --> External[AWS / Slack / MCP / Jira / Database]
 ```
 
-## 2. SDK と Workspace の境界
+## 責務の境界
 
-### SDK が所有するもの
+| 対象 | 所有する責務 | 所有しない責務 |
+| --- | --- | --- |
+| Kitsune SDK | ライフサイクル、Handler、Run Context、イベント、プラグイン、OpenTelemetry、Workspace 接続 | Agent Loop、Tool Protocol、Provider API、RAG |
+| Kitsune Workspace | Agent 定義、Runtime、Run、Schedule、Webhook、状態、利用量、監査、運用 UI | 外部通信の中継、意味的ルーティング、汎用 Workflow |
+| Agent Application | Prompt、Tool、MCP、Framework、外部 API、固有の業務処理 | 複数 Agent を横断する運用制御 |
 
-Agent プロセス内に存在する処理。
+SDK は Workspace URL がない場合も動きます。Run ID、相関 ID、親 Run ID をローカルで作り、構造化ログと設定済みの OpenTelemetry Exporter へ出力します。Workspace 向けイベントは送信先がないためローカル処理だけで完結します。
 
-- アプリケーション起動・終了フック
-- 実行コンテキスト
-- 実行識別子
-- イベント生成
-- ログ・トレース生成
-- モデル利用量の取得・イベント化
-- プラグイン読み込み
-- Sub-agent 実行補助
-- Workspace クライアント
+## 管理情報の流れ
 
-### Workspace が所有するもの
+1. Workspace は設定ディレクトリの YAML を一括検証し、Agent Definition の Snapshot と Hash を保存します。
+2. Runtime Adapter は Manifest に宣言された Process、Container、または External endpoint を扱います。
+3. 起動した SDK は Agent Descriptor と Handler Schema を登録し、Heartbeat を送ります。
+4. Trigger が Run を作成し、Queue と同時実行数の制約を通過した Run が Runtime Instance へ配送されます。
+5. SDK は Run の開始、進行、利用量、終了を Event Outbox へ保存し、Workspace へ少なくとも一回配送します。
+6. Workspace は Event ID で重複を除き、Run、Usage、Audit を保存して SSE で Web UI へ通知します。
 
-複数 Agent を横断して扱う処理。
+## 単一の制御面
 
-- Agent の登録情報
-- 現在状態
-- 起動条件
-- 実行履歴
-- イベント・ログ・利用量の受信と保存
-- Web UI
-- 手動実行
-- 定期実行
-- 実行環境への指示
+同じデータベースに対して Scheduler と Runtime 管理を行う Active Workspace は一個です。Workspace は起動時に `workspace_locks` の Instance Lock を取得します。分散 Leader Election は実装していません。可用性を高める場合も、同時に Active にするのではなく、前の Instance が停止して Lock が失効してから次を起動します。
 
-## 3. 「連携」と「起動」を分離する
+## 永続化の境界
 
-Agent の起動方法と Agent 同士の連携方法は異なる。
-
-### 起動方法
-
-Workspace の管理対象になり得る。
-
-- 常駐
-- 要求時
-- イベント起動
-- 定期実行
-- 手動実行
-
-### 連携方法
-
-Agent の内部設計に近いため、SDK / Agent 側を基本とする。
-
-- 独立
-- 同期的な Sub-agent 呼び出し
-- 外部イベント発行
-- 将来の Agent-to-Agent 通信
-
-Workspace は「どの Agent を呼ぶべきか」を知的に判断しない。
-
-## 4. Workspace は通信プロキシではない
-
-Workspace は Agent のすべての外部通信を仲介しない。
-
-```mermaid
-flowchart LR
-    W[Kitsune Workspace]
-    A[Agent]
-    AWS[AWS]
-    MCP[MCP Server]
-    SLACK[Slack API]
-
-    W <-- 管理・観測 --> A
-    A --> AWS
-    A --> MCP
-    A --> SLACK
-```
-
-Agent 固有の Tool、AWS SDK、Slack 検索、MCP 呼び出しは Agent から直接行ってよい。
-
-## 5. Agent 群の考え方
-
-Workspace には複数 Agent が存在できる。
-
-```mermaid
-flowchart TB
-    W[Kitsune Workspace]
-    A1[SRE Agent\n常駐]
-    A2[Incident Agent\nイベント起動]
-    A3[Knowledge Agent\n定期実行]
-    A4[Security Agent\n独立]
-
-    W --> A1
-    W --> A2
-    W --> A3
-    W --> A4
-```
-
-これを必ずしも「Swarm」とは呼ばない。
-
-Swarm は、複数 Agent が協調して一つのタスクを処理する構成パターンの一つでしかない。Workspace はより広く、独立した Agent 群も管理する。
-
-## 6. 重要な非依存性
-
-Kitsune SDK と Workspace は連携するが、相互に必須としない。
-
-- SDK 単体でローカル開発できる。
-- Workspace は将来的に Kitsune SDK 未使用の Agent をアダプター経由で管理できる。
-- Pydantic AI は標準候補だが、Kitsune の通信・運用モデルと同一視しない。
+Workspace は Agent Definition の Snapshot、Runtime と Run の状態、保存を許可した入力と出力、Event、Usage、Audit、Trace ID、外部 Log/Trace URL を保存します。Agent の Raw Log、Provider の全 HTTP Payload、Secret、Agent Memory、RAG 文書は保存しません。Process と Docker の直近 Log は Runtime Adapter から Tail し、External Agent では URL へ誘導します。

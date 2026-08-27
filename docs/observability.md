@@ -1,80 +1,57 @@
-# イベント・ログ・観測性
+# 観測性
 
-## 1. 基本分担
+Kitsune SDK と Workspace は OpenTelemetry を Trace、Metric、Log 相関の標準にします。SDK は Trace と Metric、Workspace は Trace、Metric、Log を OTLP endpoint へ送ります。SDK の Log は相関 Field を含む JSON として標準出力へ書き、実行環境の Log Collector で収集します。Dynatrace などの Backend に対する専用の Export Protocol は実装しません。Docker Compose では OpenTelemetry Collector の Debug Exporter で受信を確認できます。
 
-```text
-SDK
-  何を・どの形式で出力するか
+## 構造化 Log
 
-Workspace
-  受信・保存・検索・集計・表示
-```
-
-## 2. SDK の標準イベント
-
-必要最低限に絞る。
+標準出力は JSON で、利用できる範囲の次の Field を持ちます。
 
 ```text
-agent.started
-agent.ready
-agent.stopping
-agent.stopped
-
-run.started
-run.completed
-run.failed
-
-model.usage
-plugin.loaded
+timestamp level service agent_id runtime_instance_id run_id
+parent_run_id correlation_id trace_id event message
 ```
 
-共通フィールド候補:
+Authorization Header、API Key、Bearer Token、Secret 参照の解決値を出しません。Redaction Key は追加設定でき、Object と文字列化された Header の両方へ適用します。Raw Log は Workspace DB に複製しません。
 
-```json
-{
-  "type": "run.completed",
-  "timestamp": "...",
-  "agent_id": "sre-agent",
-  "run_id": "...",
-  "correlation_id": "...",
-  "payload": {}
-}
+## Trace
+
+Kitsune は次の Span を作ります。
+
+```text
+kitsune.agent.start
+kitsune.run
+kitsune.handler
+kitsune.child_run
+kitsune.workspace.dispatch
+kitsune.runtime.start
+kitsune.runtime.stop
+kitsune.schedule.dispatch
+kitsune.webhook.dispatch
 ```
 
-Agent 固有イベントは `payload` を Workspace が理解せず保存できることが望ましい。
+SDK の `ctx.child_run()` は現在の OpenTelemetry Context の下で子 Run Span を作ります。Pydantic AI と LangChain の Model/Tool Span も現在の `kitsune.run` の下に接続します。Workspace は `trace_id` を Run、Event、Agent への Dispatch Payload に保持し、Manifest の `trace_url_template` から Backend Link を作ります。
 
-## 3. OpenTelemetry
+## Metric
 
-Kitsune の標準的な観測基盤は OpenTelemetry を中心に考える。
+Run 数と時間、Active/Queued Run、失敗、Runtime 数と Restart、Heartbeat Age、Outbox Size と配送失敗、Model Request と Token と推定費用、Schedule Delay を記録します。`run_id`、`trace_id`、User ID のような高 Cardinality 値を Label にしません。
 
-```mermaid
-flowchart LR
-    A[Agent + SDK] --> O[OpenTelemetry]
-    O --> D[Dynatrace]
-    O --> L[Langfuse]
-    O --> X[その他 OTLP]
+## OTLP 設定
+
+SDK の Trace と Metric、および Workspace の Trace、Metric、Log は標準の OpenTelemetry Environment Variable を利用できます。
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_SERVICE_NAME=kitsune-workspace
 ```
 
-Langfuse はオプション。
+Dynatrace では OTLP endpoint と認証 Header を Secret として Environment に注入します。値を Manifest や Git に書かないでください。
 
-Dynatrace 等の一般的な監視基盤にも接続可能な形を維持する。
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://example.live.dynatrace.com/api/v2/otlp
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Api-Token%20${DYNATRACE_API_TOKEN}"
+```
 
-## 4. Workspace に集約する情報
+Collector から送る場合は `deploy/otel-collector.dynatrace.example.yaml` を起点にし、`DYNATRACE_OTLP_ENDPOINT` と `DYNATRACE_API_TOKEN` を Collector の Secret として渡します。
 
-- Agent 状態
-- Run 状態
-- Run 開始/終了時刻
-- エラー
-- Model 利用量
-- 推定コスト（取得可能な場合）
-- Plugin 情報
-- Trace ID
-- ログへの導線
-
-生ログを Workspace DB に複製するか、外部ログ基盤への参照だけ保持するかは未決定。
-
-## 5. 重要な原則
-
-Workspace 独自の Observability 形式を作り込みすぎない。
-
-標準イベントは Agent 管理に必要な小さい集合に限定し、詳細な Model / Tool Trace は OpenTelemetry や利用 Framework の既存機構を活用する。
+Langfuse を使う Agent は `kitsune-plugin-langfuse` を導入します。Plugin は入力・出力・Span Attribute の Masking を適用してから、Langfuse の OpenTelemetry 設定を有効にします。
