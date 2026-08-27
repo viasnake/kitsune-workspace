@@ -29,6 +29,10 @@ test.describe("Docker Compose live Workspace UI", () => {
     await expect(page).toHaveURL(/\/runs\/[^/]+$/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: /^Run / })).toBeVisible();
     await expect(page.getByText("成功", { exact: true }).first()).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText(/Processed: compose-live-ui/)).toBeVisible();
+    const output = page
+      .locator(".json-block")
+      .filter({ has: page.getByText("Output", { exact: true }) })
+      .locator("pre");
+    await expect(output).toContainText("Processed: compose-live-ui");
   });
 });
