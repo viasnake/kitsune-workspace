@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from kitsune_workspace.app import create_app
+from kitsune_workspace.app import RequestBodyLimitMiddleware, create_app
 from kitsune_workspace.config import WorkspaceSettings
 from kitsune_workspace.control_plane import EventBus, EventStreamLimitExceeded
 from kitsune_workspace.database import Database
@@ -35,6 +35,33 @@ from kitsune_workspace.runtime import (
     _require_private_runtime_directory,
 )
 from kitsune_workspace.telemetry import WorkspaceTelemetry
+
+
+@pytest.mark.asyncio
+async def test_request_body_limit_replays_then_delegates_disconnect() -> None:
+    received: list[dict[str, Any]] = []
+    upstream = iter(
+        (
+            {"type": "http.request", "body": b"", "more_body": False},
+            {"type": "http.disconnect"},
+        )
+    )
+
+    async def receive() -> dict[str, Any]:
+        return next(upstream)
+
+    async def app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+        received.append(await receive())
+        received.append(await receive())
+
+    middleware = RequestBodyLimitMiddleware(app, maximum=1024)
+    await middleware(
+        {"type": "http", "headers": [], "method": "GET", "path": "/api/stream"},
+        receive,
+        lambda _: asyncio.sleep(0),
+    )
+
+    assert [message["type"] for message in received] == ["http.request", "http.disconnect"]
 
 
 @pytest.mark.asyncio
