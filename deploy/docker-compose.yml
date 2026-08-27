@@ -83,6 +83,7 @@ services:
       retries: 30
     networks:
       kitsune-human-network:
+        gw_priority: 1
         ipv4_address: 172.31.241.10
       kitsune-data-network:
         ipv4_address: 172.31.240.10
