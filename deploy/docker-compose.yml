@@ -56,6 +56,7 @@ services:
       KITSUNE_MANAGED_AGENT_TOKEN: kt_compose_managed_agent
       KITSUNE_EPHEMERAL_AGENT_TOKEN: kt_compose_ephemeral_agent
       KITSUNE_EXTERNAL_AGENT_TOKEN: kt_compose_external_agent
+      KITSUNE_AGENT_PYTHONPATH: .
       KITSUNE_SHUTDOWN_GRACE_SECONDS: "3"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
@@ -129,6 +130,7 @@ services:
       workspace-agent-gateway:
         condition: service_started
     environment:
+      PYTHONPATH: .
       KITSUNE_WORKSPACE_URL: http://kitsune-workspace:18081
       KITSUNE_ALLOW_INSECURE_WORKSPACE: "true"
       KITSUNE_AGENT_TOKEN: kt_compose_external_agent

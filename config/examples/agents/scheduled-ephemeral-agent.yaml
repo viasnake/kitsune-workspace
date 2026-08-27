@@ -31,6 +31,7 @@ spec:
       privileged: false
       host_network: false
     environment:
+      PYTHONPATH: env://KITSUNE_AGENT_PYTHONPATH
       OTEL_EXPORTER_OTLP_ENDPOINT: env://OTEL_EXPORTER_OTLP_ENDPOINT
       KITSUNE_SHUTDOWN_GRACE_SECONDS: env://KITSUNE_SHUTDOWN_GRACE_SECONDS
     secrets: {}
