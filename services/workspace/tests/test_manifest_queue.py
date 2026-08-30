@@ -315,6 +315,42 @@ async def test_schedule_skip_and_replace_overlap(
         _close(control)
 
 
+@pytest.mark.asyncio
+async def test_stale_schedule_cursor_advances_directly_to_future_occurrence(
+    tmp_path: Path, manifest_factory: ManifestFactory
+) -> None:
+    trigger = """    - id: periodic
+      type: schedule
+      handler: default
+      cron: "* * * * *"
+      timezone: UTC
+      overlap: skip
+      misfire_grace_seconds: 300
+"""
+    manifest_factory(triggers=trigger)
+    settings = settings_for(tmp_path)
+    database = Database(settings.workspace.database_url)
+    database.create_schema()
+    control = ControlPlane(database, settings)
+    control.registry.reload()
+    before = utcnow()
+    try:
+        with database.session() as session:
+            schedule = session.scalar(select(Schedule))
+            assert schedule is not None
+            schedule.next_fire_at = before - timedelta(days=30)
+
+        assert await control.dispatch_schedules() == 0
+        with database.session() as session:
+            schedule = session.scalar(select(Schedule))
+            assert schedule is not None
+            assert ensure_aware(schedule.next_fire_at) > before
+            assert schedule.last_outcome == "misfire_skipped"
+            assert session.query(Run).count() == 0
+    finally:
+        _close(control)
+
+
 def test_instance_lock_excludes_a_second_control_plane(tmp_path: Path) -> None:
     database = Database(f"sqlite:///{tmp_path / 'lock.sqlite3'}")
     database.create_schema()
@@ -575,6 +611,11 @@ def test_run_retention_keeps_and_removes_linked_event_usage_as_one_unit(
             input_value={},
             start_running=True,
         )
+        with control.database.session() as session:
+            completed = session.get(Run, long_run.run_id)
+            assert completed is not None
+            completed.status = "succeeded"
+            completed.ended_at = now
         short_run, _ = control.runs.create(
             agent_id="demo-agent",
             handler="default",

@@ -1384,6 +1384,48 @@ async def test_control_api_accepts_workspace_agent_run_assignment_wire_contract(
 
 
 @pytest.mark.asyncio
+async def test_control_api_repeated_completed_run_id_is_idempotent(tmp_path: Path) -> None:
+    """A lost 202 response cannot cause a completed resident Run to execute twice."""
+
+    application = make_app(tmp_path, agent_token="control-secret")
+    calls = 0
+    completed = asyncio.Event()
+
+    @application.handler("echo", input_model=Request, output_model=Result)
+    async def echo(ctx: RunContext, request: Request) -> Result:
+        nonlocal calls
+        calls += 1
+        completed.set()
+        return Result(value=request.value)
+
+    await application.startup()
+    assignment = {
+        "run_id": str(uuid4()),
+        "agent_id": "test-agent",
+        "handler": "echo",
+        "source": "on_demand",
+        "input": {"value": "once"},
+        "correlation_id": str(uuid4()),
+    }
+    headers = {"Authorization": "Bearer control-secret"}
+    transport = httpx.ASGITransport(app=create_control_api(application))
+    async with httpx.AsyncClient(transport=transport, base_url="http://agent") as client:
+        first = await client.post("/_kitsune/runs", json=assignment, headers=headers)
+        assert first.status_code == 202, first.text
+        await completed.wait()
+        for _ in range(10):
+            if not application._submitted_runs:
+                break
+            await asyncio.sleep(0)
+        duplicate = await client.post("/_kitsune/runs", json=assignment, headers=headers)
+
+    assert duplicate.status_code == 202, duplicate.text
+    assert duplicate.json()["run_id"] == assignment["run_id"]
+    assert calls == 1
+    await application.shutdown()
+
+
+@pytest.mark.asyncio
 async def test_control_api_rejects_before_202_when_terminal_capacity_is_unavailable(
     tmp_path: Path,
 ) -> None:

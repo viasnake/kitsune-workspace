@@ -16,7 +16,14 @@ from fastapi.testclient import TestClient
 from kitsune_workspace.app import create_app
 from kitsune_workspace.control_plane import ControlPlane
 from kitsune_workspace.database import Database
-from kitsune_workspace.models import AgentDefinition, Event, Run, RuntimeInstance, UsageRecord
+from kitsune_workspace.models import (
+    AgentDefinition,
+    Event,
+    Handler,
+    Run,
+    RuntimeInstance,
+    UsageRecord,
+)
 from kitsune_workspace.services import RunServiceError
 
 
@@ -344,6 +351,7 @@ def test_event_payload_policy_omits_nested_run_content_and_preserves_default(
         definition = session.get(AgentDefinition, "demo-agent")
         assert definition is not None
         snapshot = copy.deepcopy(definition.snapshot)
+        snapshot["spec"]["invocation"]["max_concurrency"] = 3
         snapshot["spec"]["invocation"]["store_input"] = False
         snapshot["spec"]["invocation"]["store_output"] = False
         definition.snapshot = snapshot
@@ -663,6 +671,60 @@ def test_agent_run_begin_contract_rejects_invalid_lineage(client: TestClient) ->
         headers=agent_headers(),
     )
     assert self_with_parent.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("max_concurrency", "handler_limit", "expected_detail"),
+    [
+        (1, None, "Agent concurrency is exhausted"),
+        (2, 1, "Handler 'default' concurrency is exhausted"),
+    ],
+)
+def test_agent_run_begin_cannot_consume_queue_capacity_as_concurrency(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+    max_concurrency: int,
+    handler_limit: int | None,
+    expected_detail: str,
+) -> None:
+    manifest_factory(max_concurrency=max_concurrency, queue_capacity=20)
+    with TestClient(create_app(settings_for(tmp_path)), base_url="http://127.0.0.1:8080") as client:
+        runtime_id = _register(client)
+        if handler_limit is not None:
+            with client.app.state.database.session() as session:
+                handler = (
+                    session.query(Handler).filter_by(agent_id="demo-agent", name="default").one()
+                )
+                handler.max_concurrency = handler_limit
+        base = {
+            "agent_id": "demo-agent",
+            "runtime_instance_id": runtime_id,
+            "handler": "default",
+            "source": "self",
+            "input": {},
+        }
+        first = client.post(
+            "/api/agent/runs/begin",
+            json={
+                **base,
+                "run_id": str(uuid.uuid4()),
+                "correlation_id": str(uuid.uuid4()),
+            },
+            headers=agent_headers(),
+        )
+        rejected = client.post(
+            "/api/agent/runs/begin",
+            json={
+                **base,
+                "run_id": str(uuid.uuid4()),
+                "correlation_id": str(uuid.uuid4()),
+            },
+            headers=agent_headers(),
+        )
+
+        assert first.status_code == 201, first.text
+        assert rejected.status_code == 429
+        assert rejected.json()["detail"] == expected_detail
 
 
 def test_agent_run_begin_uses_exact_ready_runtime_for_self_and_child(

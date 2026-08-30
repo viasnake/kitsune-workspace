@@ -377,8 +377,82 @@ async def test_docker_outbox_survives_exit_and_is_recovered_before_cleanup(
 
 
 @pytest.mark.asyncio
+async def test_resident_assignment_is_persisted_before_fast_terminal_events(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    control = _control(tmp_path, manifest_factory, adapter="external", mode="resident")
+    instance_id = str(uuid.uuid4())
+    with control.database.session() as session:
+        session.add(Handler(agent_id="demo-agent", name="default", default_timeout_seconds=30))
+        session.add(
+            RuntimeInstance(
+                runtime_instance_id=instance_id,
+                agent_id="demo-agent",
+                adapter="external",
+                mode="resident",
+                status="ready",
+                control_url="https://agent.example.invalid",
+                started_at=utcnow(),
+                ready_at=utcnow(),
+            )
+        )
+    run, _ = control.runs.create(
+        agent_id="demo-agent",
+        handler="default",
+        source="on_demand",
+        input_value={},
+    )
+
+    async def terminal_before_acceptance(*_: Any, **__: Any) -> None:
+        with control.database.session() as session:
+            assigned = session.get(Run, run.run_id)
+            assert assigned is not None
+            assert assigned.status == "dispatching"
+            assert assigned.runtime_instance_id == instance_id
+        events = [
+            {
+                "event_id": str(uuid.uuid4()),
+                "type": "kitsune.run.started",
+                "occurred_at": utcnow().isoformat(),
+                "agent_id": "demo-agent",
+                "runtime_instance_id": instance_id,
+                "run_id": run.run_id,
+                "correlation_id": run.correlation_id,
+                "severity": "info",
+                "payload": {},
+            },
+            {
+                "event_id": str(uuid.uuid4()),
+                "type": "kitsune.run.succeeded",
+                "occurred_at": utcnow().isoformat(),
+                "agent_id": "demo-agent",
+                "runtime_instance_id": instance_id,
+                "run_id": run.run_id,
+                "correlation_id": run.correlation_id,
+                "severity": "info",
+                "payload": {"output": {"fast": True}},
+            },
+        ]
+        control.events_service.ingest("demo-agent", events)
+
+    monkeypatch.setattr(control.runtime, "dispatch_resident", terminal_before_acceptance)
+    try:
+        assert await control.runs.dispatch_available() == 1
+        with control.database.session() as session:
+            stored = session.get(Run, run.run_id)
+            assert stored is not None
+            assert stored.status == "succeeded"
+            assert stored.output == {"fast": True}
+            assert stored.runtime_instance_id == instance_id
+    finally:
+        await _close(control)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("error_type", [httpx.ConnectError, httpx.ReadError])
-async def test_resident_transport_failure_is_terminal_not_stuck_dispatching(
+async def test_resident_transport_failure_keeps_assignment_for_idempotent_retry(
     tmp_path: Path,
     manifest_factory: ManifestFactory,
     monkeypatch: pytest.MonkeyPatch,
@@ -438,12 +512,117 @@ async def test_resident_transport_failure_is_terminal_not_stuck_dispatching(
     try:
         assert await control.runs.dispatch_available() == 0
         with control.database.session() as session:
+            uncertain = session.get(Run, run.run_id)
+            assert uncertain is not None
+            assert uncertain.status == "dispatching"
+            assert uncertain.runtime_instance_id == instance_id
+            assert uncertain.error is None
+
+        async def accepted_retry(*_: Any, **__: Any) -> None:
+            return None
+
+        monkeypatch.setattr(control.runtime, "dispatch_resident", accepted_retry)
+        assert await control.runs.dispatch_available() == 1
+        with control.database.session() as session:
+            accepted = session.get(Run, run.run_id)
+            assert accepted is not None
+            assert accepted.status == "running"
+            assert accepted.runtime_instance_id == instance_id
+    finally:
+        await _close(control)
+
+
+@pytest.mark.asyncio
+async def test_resident_dispatching_run_is_retried_after_workspace_restart(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    control = _control(tmp_path, manifest_factory, adapter="external", mode="resident")
+    instance_id = str(uuid.uuid4())
+    with control.database.session() as session:
+        session.add(Handler(agent_id="demo-agent", name="default", default_timeout_seconds=30))
+        session.add(
+            RuntimeInstance(
+                runtime_instance_id=instance_id,
+                agent_id="demo-agent",
+                adapter="external",
+                mode="resident",
+                status="ready",
+                control_url="https://agent.example.invalid",
+                started_at=utcnow(),
+                ready_at=utcnow(),
+            )
+        )
+    run, _ = control.runs.create(
+        agent_id="demo-agent",
+        handler="default",
+        source="on_demand",
+        input_value={},
+    )
+    with control.database.session() as session:
+        persisted = session.get(Run, run.run_id)
+        assert persisted is not None
+        persisted.status = "dispatching"
+        persisted.dispatching_at = utcnow()
+        persisted.runtime_instance_id = instance_id
+
+    submitted: list[str] = []
+
+    async def accepted(detached: Run, *_: Any) -> None:
+        submitted.append(detached.run_id)
+
+    monkeypatch.setattr(control.runtime, "dispatch_resident", accepted)
+    try:
+        assert await control.runs.dispatch_available() == 1
+        assert submitted == [run.run_id]
+        with control.database.session() as session:
+            recovered = session.get(Run, run.run_id)
+            assert recovered is not None and recovered.status == "running"
+    finally:
+        await _close(control)
+
+
+@pytest.mark.asyncio
+async def test_resident_explicit_rejection_is_terminal(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    control = _control(tmp_path, manifest_factory, adapter="external", mode="resident")
+    instance_id = str(uuid.uuid4())
+    with control.database.session() as session:
+        session.add(Handler(agent_id="demo-agent", name="default", default_timeout_seconds=30))
+        session.add(
+            RuntimeInstance(
+                runtime_instance_id=instance_id,
+                agent_id="demo-agent",
+                adapter="external",
+                mode="resident",
+                status="ready",
+                control_url="https://agent.example.invalid",
+                started_at=utcnow(),
+                ready_at=utcnow(),
+            )
+        )
+    run, _ = control.runs.create(
+        agent_id="demo-agent",
+        handler="default",
+        source="on_demand",
+        input_value={},
+    )
+
+    async def rejected(*_: Any, **__: Any) -> None:
+        raise runtime_module.RuntimeOperationError("Agent returned 409")
+
+    monkeypatch.setattr(control.runtime, "dispatch_resident", rejected)
+    try:
+        assert await control.runs.dispatch_available() == 0
+        with control.database.session() as session:
             failed = session.get(Run, run.run_id)
-            assert failed is not None
-            assert failed.status == "failed"
+            assert failed is not None and failed.status == "failed"
             assert failed.error is not None
             assert failed.error["type"] == "dispatch_failed"
-            assert failed.error["message"] == "Runtime dispatch failed"
     finally:
         await _close(control)
 

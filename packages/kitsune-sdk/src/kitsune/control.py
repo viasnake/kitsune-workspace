@@ -256,7 +256,7 @@ def create_control_api(
                 "Run input validation failed",
             ) from exc
         try:
-            task = await application.submit(
+            task, created = await application.submit_control_run(
                 request.handler,
                 request.input,
                 run_id=request.run_id,
@@ -272,7 +272,8 @@ def create_control_api(
             ) from exc
         except DuplicateRunError as exc:
             raise HTTPException(status.HTTP_409_CONFLICT, "Run is already active") from exc
-        task.add_done_callback(_consume_task_result)
+        if created and task is not None:
+            task.add_done_callback(_consume_task_result)
         return AcceptedRun(run_id=request.run_id)
 
     @api.post("/_kitsune/runs/{run_id}/cancel", status_code=status.HTTP_202_ACCEPTED)

@@ -423,6 +423,8 @@ class ControlPlane:
                 if schedule is None or not schedule.enabled:
                     continue
                 scheduled_for = ensure_aware(schedule.next_fire_at)
+                delay = (now - scheduled_for).total_seconds()
+                stale = delay > schedule.misfire_grace_seconds
                 active_ids = list(
                     session.scalars(
                         select(Run.run_id).where(
@@ -433,7 +435,9 @@ class ControlPlane:
                     )
                 )
                 schedule.next_fire_at = next_fire_time(
-                    schedule.cron, schedule.timezone, scheduled_for
+                    schedule.cron,
+                    schedule.timezone,
+                    now if stale else scheduled_for,
                 )
                 schedule.last_fire_at = scheduled_for
                 snapshot = {
@@ -443,18 +447,19 @@ class ControlPlane:
                     "overlap": schedule.overlap,
                     "misfire_grace_seconds": schedule.misfire_grace_seconds,
                     "scheduled_for": scheduled_for,
+                    "delay": delay,
+                    "stale": stale,
                     "active_ids": active_ids,
                 }
-            delay = (now - snapshot["scheduled_for"]).total_seconds()
             with self.telemetry.span(
                 "kitsune.schedule.dispatch",
                 agent_id=snapshot["agent_id"],
                 trigger_id=snapshot["trigger_id"],
             ):
                 self.telemetry.schedule_delay.record(
-                    max(0.0, delay), {"agent_id": snapshot["agent_id"]}
+                    max(0.0, snapshot["delay"]), {"agent_id": snapshot["agent_id"]}
                 )
-            if delay > snapshot["misfire_grace_seconds"]:
+            if snapshot["stale"]:
                 outcome = "misfire_skipped"
             elif snapshot["active_ids"] and snapshot["overlap"] == "skip":
                 outcome = "overlap_skipped"

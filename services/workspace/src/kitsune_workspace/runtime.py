@@ -13,6 +13,7 @@ import os
 import re
 import signal
 import stat
+import sys
 import tarfile
 import tempfile
 import uuid
@@ -40,6 +41,10 @@ if TYPE_CHECKING:
 
 class RuntimeOperationError(RuntimeError):
     """Raised when a manifest-declared runtime operation cannot complete."""
+
+
+class RuntimeDispatchUncertain(RuntimeOperationError):
+    """Raised when transport failed without proving whether a Run was accepted."""
 
 
 class DockerEngineError(RuntimeOperationError):
@@ -321,6 +326,10 @@ class ProcessAdapter:
         instance_id: str,
         snapshot: dict[str, Any],
         extra_environment: dict[str, str] | None = None,
+        *,
+        launch_record_path: Path | None = None,
+        exec_gate_path: Path | None = None,
+        persist_identity: Callable[[int, str], None] | None = None,
     ) -> dict[str, Any]:
         """Start one process and begin bounded stdout/stderr capture."""
 
@@ -340,9 +349,36 @@ class ProcessAdapter:
         self._redactions[instance_id] = _runtime_secret_values(
             snapshot, environment, self.redacted_keys
         )
+        use_handshake = (
+            launch_record_path is not None
+            and exec_gate_path is not None
+            and persist_identity is not None
+        )
+        if (
+            any(item is not None for item in (launch_record_path, exec_gate_path, persist_identity))
+            and not use_handshake
+        ):
+            raise RuntimeOperationError("process launch handshake is incomplete")
+        spawn_command = command
+        if use_handshake:
+            assert launch_record_path is not None and exec_gate_path is not None
+            for path in (launch_record_path, exec_gate_path):
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    continue
+                raise RuntimeOperationError(f"process launch state already exists: {path}")
+            spawn_command = [
+                sys.executable,
+                str(Path(__file__).with_name("process_launcher.py")),
+                str(launch_record_path),
+                str(exec_gate_path),
+                "--",
+                *command,
+            ]
         try:
             process = await asyncio.create_subprocess_exec(
-                *command,
+                *spawn_command,
                 cwd=working_directory,
                 env=environment,
                 stdout=asyncio.subprocess.PIPE,
@@ -360,10 +396,99 @@ class ProcessAdapter:
             self._reader_tasks[instance_id].append(
                 asyncio.create_task(self._read_stream(instance_id, "stderr", process.stderr))
             )
+        if use_handshake:
+            assert launch_record_path is not None
+            assert exec_gate_path is not None
+            assert persist_identity is not None
+            try:
+                identity = await self._wait_for_launch_record(
+                    launch_record_path, process, timeout_seconds=30
+                )
+                await asyncio.to_thread(persist_identity, *identity)
+                await asyncio.to_thread(self._create_exec_gate, exec_gate_path)
+            except BaseException:
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+                await process.wait()
+                await self.cleanup(instance_id)
+                await asyncio.to_thread(
+                    self.cleanup_launch_state, launch_record_path, exec_gate_path
+                )
+                raise
+            return {"pid": identity[0], "process_start_time": identity[1]}
         return {
             "pid": process.pid,
             "process_start_time": _linux_process_start_time(process.pid),
         }
+
+    async def _wait_for_launch_record(
+        self,
+        path: Path,
+        process: asyncio.subprocess.Process,
+        *,
+        timeout_seconds: float,
+    ) -> tuple[int, str]:
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while asyncio.get_running_loop().time() < deadline:
+            identity = await asyncio.to_thread(self.read_launch_record, path)
+            if identity is not None:
+                if identity[0] != process.pid:
+                    raise RuntimeOperationError("process launcher recorded a different PID")
+                return identity
+            if process.returncode is not None:
+                raise RuntimeOperationError("process launcher exited before recording its PID")
+            await asyncio.sleep(0.01)
+        raise RuntimeOperationError("process launcher did not record its PID in time")
+
+    @staticmethod
+    def read_launch_record(path: Path) -> tuple[int, str] | None:
+        """Return the durable process identity recorded before target exec."""
+
+        try:
+            metadata = path.lstat()
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+                raise RuntimeOperationError("process launch record is not a regular file")
+            if hasattr(os, "geteuid") and metadata.st_uid != os.geteuid():
+                raise RuntimeOperationError("process launch record is not owned by Workspace")
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            raise RuntimeOperationError("process launch record is invalid") from exc
+        pid = payload.get("pid") if isinstance(payload, dict) else None
+        process_start_time = (
+            payload.get("process_start_time") if isinstance(payload, dict) else None
+        )
+        if not isinstance(pid, int) or pid <= 0 or not isinstance(process_start_time, str):
+            raise RuntimeOperationError("process launch record has an invalid identity")
+        return pid, process_start_time
+
+    @staticmethod
+    def _create_exec_gate(path: Path) -> None:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(path, flags, 0o600)
+        try:
+            os.write(descriptor, b"ready\n")
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    @classmethod
+    def open_exec_gate(cls, path: Path) -> None:
+        """Allow a recovered launcher to exec after its identity is durably owned."""
+
+        try:
+            cls._create_exec_gate(path)
+        except FileExistsError:
+            return
+
+    @staticmethod
+    def cleanup_launch_state(record_path: Path, gate_path: Path) -> None:
+        """Remove launch handshake files after physical process termination."""
+
+        for path in (gate_path, record_path):
+            with contextlib.suppress(FileNotFoundError):
+                path.unlink()
 
     async def _read_stream(
         self,
@@ -1237,7 +1362,7 @@ class ExternalAdapter:
                 json_body=body,
             )
         except httpx.HTTPError as exc:
-            raise RuntimeOperationError(f"Agent Control API transport failed: {exc}") from exc
+            raise RuntimeDispatchUncertain(f"Agent Control API transport failed: {exc}") from exc
         if response_status != 202:
             raise RuntimeOperationError(
                 f"Agent Control API returned {response_status}, expected 202"
@@ -1368,6 +1493,60 @@ class RuntimeManager:
             "/var/lib/kitsune-outbox/events.sqlite3" if adapter == "docker" else str(host_path)
         )
         return host_path, runtime_path
+
+    def _process_launch_paths(self, instance: RuntimeInstance) -> tuple[Path, Path] | None:
+        """Return validated launch-state paths stored for one managed process."""
+
+        metadata = instance.runtime_metadata or {}
+        record_value = metadata.get("process_launch_record_path")
+        gate_value = metadata.get("process_exec_gate_path")
+        if not isinstance(record_value, str) or not isinstance(gate_value, str):
+            return None
+        root = self.settings.workspace.runtime_state_directory.resolve(strict=False)
+        record_path = Path(record_value).resolve(strict=False)
+        gate_path = Path(gate_value).resolve(strict=False)
+        if not record_path.is_relative_to(root) or not gate_path.is_relative_to(root):
+            raise RuntimeOperationError("process launch state escaped the runtime directory")
+        if record_path.parent != gate_path.parent:
+            raise RuntimeOperationError("process launch state paths do not share a directory")
+        return record_path, gate_path
+
+    def _recover_process_identity(
+        self, instance: RuntimeInstance, *, open_exec_gate: bool
+    ) -> tuple[int, str] | None:
+        """Recover and persist a launcher's PID identity after Workspace restart."""
+
+        paths = self._process_launch_paths(instance)
+        if paths is None:
+            return None
+        record_path, gate_path = paths
+        identity = self.process.read_launch_record(record_path)
+        if identity is None:
+            return None
+        pid, process_start_time = identity
+        if _linux_process_start_time(pid) != process_start_time:
+            return None
+        with self.database.session() as session:
+            definition = lock_agent_definition(session, instance.agent_id)
+            if definition is None:
+                return None
+            current = session.get(RuntimeInstance, instance.runtime_instance_id)
+            if current is None or current.status in {"stopped", "failed", "lost"}:
+                return None
+            if current.pid not in {None, pid}:
+                raise RuntimeOperationError("recovered process PID conflicts with Runtime state")
+            current.pid = pid
+            metadata = dict(current.runtime_metadata or {})
+            recorded_start_time = metadata.get("process_start_time")
+            if recorded_start_time not in {None, process_start_time}:
+                raise RuntimeOperationError(
+                    "recovered process identity conflicts with Runtime state"
+                )
+            metadata["process_start_time"] = process_start_time
+            current.runtime_metadata = metadata
+        if open_exec_gate:
+            self.process.open_exec_gate(gate_path)
+        return identity
 
     def _agent_token(self, snapshot: dict[str, Any]) -> str:
         reference = nested(snapshot, "spec", "security", "agent_token_ref")
@@ -1551,6 +1730,21 @@ class RuntimeManager:
                 outbox_host_path, outbox_runtime_path = self._outbox_paths(
                     agent_id, instance_id, definition.runtime_adapter
                 )
+                launch_record_path = outbox_host_path.with_name("process-launch.json")
+                exec_gate_path = outbox_host_path.with_name("process-exec.ready")
+                runtime_metadata = {
+                    "ephemeral_run_id": run.run_id if run else None,
+                    "manifest_hash": definition.content_hash,
+                    "runtime_hash": _runtime_snapshot_hash(definition.snapshot),
+                    "outbox_path": str(outbox_host_path),
+                }
+                if definition.runtime_adapter == "process":
+                    runtime_metadata.update(
+                        {
+                            "process_launch_record_path": str(launch_record_path),
+                            "process_exec_gate_path": str(exec_gate_path),
+                        }
+                    )
                 runtime = RuntimeInstance(
                     runtime_instance_id=instance_id,
                     agent_id=agent_id,
@@ -1560,12 +1754,7 @@ class RuntimeManager:
                     restart_attempts=restart_attempt,
                     started_at=utcnow(),
                     control_url=self._docker_control_url(definition.snapshot, instance_id),
-                    runtime_metadata={
-                        "ephemeral_run_id": run.run_id if run else None,
-                        "manifest_hash": definition.content_hash,
-                        "runtime_hash": _runtime_snapshot_hash(definition.snapshot),
-                        "outbox_path": str(outbox_host_path),
-                    },
+                    runtime_metadata=runtime_metadata,
                 )
                 session.add(runtime)
                 snapshot = definition.snapshot
@@ -1591,6 +1780,29 @@ class RuntimeManager:
                         )
                     current.container_id = container_id
 
+            def persist_process_identity(pid: int, process_start_time: str) -> None:
+                """Commit process ownership before the launcher may exec the target."""
+
+                with self.database.session() as session:
+                    current = session.get(RuntimeInstance, instance_id)
+                    if current is None:
+                        raise RuntimeOperationError(
+                            "Runtime Instance disappeared after process launcher spawn"
+                        )
+                    if current.pid not in {None, pid}:
+                        raise RuntimeOperationError(
+                            "Runtime Instance already owns a different process"
+                        )
+                    current.pid = pid
+                    metadata = dict(current.runtime_metadata or {})
+                    recorded_start_time = metadata.get("process_start_time")
+                    if recorded_start_time not in {None, process_start_time}:
+                        raise RuntimeOperationError(
+                            "Runtime Instance already owns a different process identity"
+                        )
+                    metadata["process_start_time"] = process_start_time
+                    current.runtime_metadata = metadata
+
             try:
                 extra = self._runtime_environment_contract(
                     snapshot=snapshot,
@@ -1610,7 +1822,14 @@ class RuntimeManager:
                     "kitsune.runtime.start", agent_id=agent_id, adapter=adapter
                 ):
                     if adapter == "process":
-                        result = await self.process.start(instance_id, snapshot, extra)
+                        result = await self.process.start(
+                            instance_id,
+                            snapshot,
+                            extra,
+                            launch_record_path=launch_record_path,
+                            exec_gate_path=exec_gate_path,
+                            persist_identity=persist_process_identity,
+                        )
                     elif adapter == "docker":
                         result = await self.docker.start(
                             instance_id,
@@ -1732,13 +1951,31 @@ class RuntimeManager:
         outbox_recovered = False
         physical_stop_confirmed = False
         failed_run_ids: list[str] = []
+        process_launch_paths = (
+            self._process_launch_paths(instance) if adapter == "process" else None
+        )
         try:
             with self.telemetry.span("kitsune.runtime.stop", adapter=adapter, force=force):
                 if adapter == "process":
-                    if self.process.status(instance_id) is None and instance.pid is not None:
+                    process_status = self.process.status(instance_id)
+                    if process_status is None:
+                        pid = instance.pid
+                        process_start_time = (instance.runtime_metadata or {}).get(
+                            "process_start_time"
+                        )
+                        if pid is None:
+                            recovered = self._recover_process_identity(
+                                instance, open_exec_gate=False
+                            )
+                            if recovered is not None:
+                                pid, process_start_time = recovered
+                        if pid is None:
+                            raise RuntimeOperationError(
+                                "managed process identity is not yet recoverable"
+                            )
                         await self.process.stop_persisted(
-                            instance.pid,
-                            (instance.runtime_metadata or {}).get("process_start_time"),
+                            pid,
+                            process_start_time,
                             grace_seconds,
                             force,
                         )
@@ -1750,6 +1987,10 @@ class RuntimeManager:
                         stopped = session.get(RuntimeInstance, instance_id)
                     if stopped is not None:
                         outbox_recovered = await self._recover_runtime_outbox(stopped)
+                    if process_launch_paths is not None:
+                        await asyncio.to_thread(
+                            self.process.cleanup_launch_state, *process_launch_paths
+                        )
                 elif adapter == "docker" and container_id:
                     await self.docker.stop(container_id, grace_seconds, force)
                     physical_stop_confirmed = True
@@ -2234,11 +2475,21 @@ class RuntimeManager:
         exit_code: int | None = None
         if instance.adapter == "process":
             process_status = self.process.status(instance.runtime_instance_id)
-            if process_status is None and instance.pid:
-                try:
-                    os.kill(instance.pid, 0)
-                except OSError:
-                    exited = True
+            if process_status is None:
+                pid = instance.pid
+                process_start_time = (instance.runtime_metadata or {}).get("process_start_time")
+                if instance.status == "starting" or pid is None:
+                    recovered = self._recover_process_identity(instance, open_exec_gate=True)
+                    if recovered is not None:
+                        pid, process_start_time = recovered
+                        instance.pid = pid
+                        metadata = dict(instance.runtime_metadata or {})
+                        metadata["process_start_time"] = process_start_time
+                        instance.runtime_metadata = metadata
+                if pid is None:
+                    observation_succeeded = False
+                else:
+                    exited = _linux_process_start_time(pid) != process_start_time
             elif process_status is not None:
                 alive, exit_code = process_status
                 exited = not alive

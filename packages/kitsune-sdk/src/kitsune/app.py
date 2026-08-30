@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 import os
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, suppress
 from dataclasses import dataclass
@@ -369,6 +370,9 @@ class KitsuneApp(AbstractAsyncContextManager["KitsuneApp"]):
         self._run_outbox_reservations: dict[UUID, _RunOutboxReservation] = {}
         self._run_outbox_reservation_lock = asyncio.Lock()
         self._submitted_runs: dict[UUID, asyncio.Task[BaseModel]] = {}
+        self._submission_lock = asyncio.Lock()
+        self._accepted_control_runs: OrderedDict[UUID, None] = OrderedDict()
+        self._accepted_control_run_limit = 10_000
         self._background_tasks: set[asyncio.Task[Any]] = set()
         self._delivery_stop = asyncio.Event()
         self._heartbeat_stop = asyncio.Event()
@@ -868,6 +872,37 @@ class KitsuneApp(AbstractAsyncContextManager["KitsuneApp"]):
     ) -> asyncio.Task[BaseModel]:
         """Reserve terminal Event capacity, then schedule one background Handler Run."""
 
+        async with self._submission_lock:
+            return await self._submit_locked(handler, input_data, run_options)
+
+    async def submit_control_run(
+        self,
+        handler: str,
+        input_data: Any,
+        **run_options: Any,
+    ) -> tuple[asyncio.Task[BaseModel] | None, bool]:
+        """Accept one Control API Run ID once, including after fast completion."""
+
+        submitted_run_id = cast(UUID | None, run_options.get("run_id"))
+        if submitted_run_id is None:
+            raise ValueError("Control API submission requires run_id")
+        async with self._submission_lock:
+            if submitted_run_id in self._accepted_control_runs:
+                self._accepted_control_runs.move_to_end(submitted_run_id)
+                return self._submitted_runs.get(submitted_run_id), False
+            task = await self._submit_locked(handler, input_data, run_options)
+            self._accepted_control_runs[submitted_run_id] = None
+            self._prune_accepted_control_runs()
+            return task, True
+
+    async def _submit_locked(
+        self,
+        handler: str,
+        input_data: Any,
+        run_options: dict[str, Any],
+    ) -> asyncio.Task[BaseModel]:
+        """Create one submission while the caller owns the submission lock."""
+
         if not self.started:
             raise AppNotRunningError("Kitsune application is not accepting Runs")
         if handler not in self._handlers:
@@ -899,6 +934,15 @@ class KitsuneApp(AbstractAsyncContextManager["KitsuneApp"]):
 
         task.add_done_callback(release_submission)
         return task
+
+    def _prune_accepted_control_runs(self) -> None:
+        """Bound completed idempotency markers without evicting active submissions."""
+
+        for run_id in list(self._accepted_control_runs):
+            if len(self._accepted_control_runs) <= self._accepted_control_run_limit:
+                break
+            if run_id not in self._active_runs and run_id not in self._submitted_runs:
+                self._accepted_control_runs.pop(run_id, None)
 
     async def emit(
         self,

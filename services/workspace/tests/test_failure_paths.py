@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import copy
 import signal
+import sys
 import time
 import uuid
 from collections.abc import Iterator
@@ -21,6 +22,7 @@ from conftest import ManifestFactory, settings_for
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect
 
+import kitsune_workspace.runtime as runtime_module
 from kitsune_workspace.app import create_app
 from kitsune_workspace.control_plane import ControlPlane
 from kitsune_workspace.database import Database
@@ -43,6 +45,132 @@ async def _close(control: ControlPlane) -> None:
     await control.runtime.shutdown()
     control.telemetry.shutdown()
     control.database.dispose()
+
+
+async def _launch_gated_process(
+    launch_record: Path, exec_gate: Path, target_marker: Path
+) -> asyncio.subprocess.Process:
+    launch_record.parent.mkdir(parents=True, exist_ok=True)
+    return await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(Path(runtime_module.__file__).with_name("process_launcher.py")),
+        str(launch_record),
+        str(exec_gate),
+        "--",
+        "/usr/bin/touch",
+        str(target_marker),
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+async def _wait_for_launch_identity(
+    launch_record: Path, process: asyncio.subprocess.Process
+) -> tuple[int, str]:
+    deadline = asyncio.get_running_loop().time() + 30
+    while asyncio.get_running_loop().time() < deadline:
+        identity = ProcessAdapter.read_launch_record(launch_record)
+        if identity is not None:
+            assert identity[0] == process.pid
+            return identity
+        await asyncio.sleep(0.01)
+    raise AssertionError("process launcher did not record its identity")
+
+
+@pytest.mark.asyncio
+async def test_restart_recovers_and_stops_process_spawned_before_pid_commit(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+) -> None:
+    control = _control(tmp_path, manifest_factory, adapter="process", mode="resident")
+    instance_id = str(uuid.uuid4())
+    outbox_path, _ = control.runtime._outbox_paths("demo-agent", instance_id, "process")
+    launch_record = outbox_path.with_name("process-launch.json")
+    exec_gate = outbox_path.with_name("process-exec.ready")
+    target_marker = tmp_path / "target-started"
+    process = await _launch_gated_process(launch_record, exec_gate, target_marker)
+    try:
+        await _wait_for_launch_identity(launch_record, process)
+        assert not target_marker.exists()
+
+        with control.database.session() as session:
+            session.add(
+                RuntimeInstance(
+                    runtime_instance_id=instance_id,
+                    agent_id="demo-agent",
+                    adapter="process",
+                    mode="resident",
+                    status="starting",
+                    started_at=utcnow(),
+                    runtime_metadata={
+                        "outbox_path": str(outbox_path),
+                        "process_launch_record_path": str(launch_record),
+                        "process_exec_gate_path": str(exec_gate),
+                    },
+                )
+            )
+
+        stopped = await control.runtime.stop_instance(instance_id, force=True)
+        await asyncio.wait_for(process.wait(), timeout=3)
+        assert stopped.status == "stopped"
+        assert stopped.pid == process.pid
+        assert not target_marker.exists()
+        assert not launch_record.exists()
+        assert not exec_gate.exists()
+    finally:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+        await _close(control)
+
+
+@pytest.mark.asyncio
+async def test_restart_opens_process_exec_gate_after_pid_commit(
+    tmp_path: Path,
+    manifest_factory: ManifestFactory,
+) -> None:
+    control = _control(tmp_path, manifest_factory, adapter="process", mode="resident")
+    instance_id = str(uuid.uuid4())
+    outbox_path, _ = control.runtime._outbox_paths("demo-agent", instance_id, "process")
+    launch_record = outbox_path.with_name("process-launch.json")
+    exec_gate = outbox_path.with_name("process-exec.ready")
+    target_marker = tmp_path / "target-started"
+    process = await _launch_gated_process(launch_record, exec_gate, target_marker)
+    try:
+        pid, process_start_time = await _wait_for_launch_identity(launch_record, process)
+        with control.database.session() as session:
+            session.add(
+                RuntimeInstance(
+                    runtime_instance_id=instance_id,
+                    agent_id="demo-agent",
+                    adapter="process",
+                    mode="resident",
+                    status="starting",
+                    pid=pid,
+                    started_at=utcnow(),
+                    runtime_metadata={
+                        "outbox_path": str(outbox_path),
+                        "process_start_time": process_start_time,
+                        "process_launch_record_path": str(launch_record),
+                        "process_exec_gate_path": str(exec_gate),
+                    },
+                )
+            )
+
+        await control.runtime.monitor()
+        await asyncio.wait_for(process.wait(), timeout=3)
+        assert exec_gate.exists()
+        assert target_marker.exists()
+        stopped = await control.runtime.stop_instance(instance_id, force=True)
+        assert stopped.status == "stopped"
+        assert not launch_record.exists()
+        assert not exec_gate.exists()
+    finally:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+        await _close(control)
 
 
 @pytest.mark.asyncio

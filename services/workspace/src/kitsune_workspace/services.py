@@ -30,7 +30,7 @@ from .models import (
     Schedule,
     UsageRecord,
 )
-from .runtime import RuntimeManager, RuntimeOperationError
+from .runtime import RuntimeDispatchUncertain, RuntimeManager, RuntimeOperationError
 from .storage import (
     RUN_TERMINAL_ERROR_HEADROOM_BYTES,
     RUN_TERMINAL_EVENT_HEADROOM_BYTES,
@@ -659,39 +659,47 @@ class RunService:
                 )
                 or 0
             )
-            agent_at_capacity = active_agent + pending_agent >= max_concurrency
-            handler_at_capacity = active_handler + pending_handler >= handler_limit
-            agent_queue_policy = str(invocation.get("queue_policy", "queue"))
-            handler_queue_policy = str(
-                handler_override.get("queue_policy")
-                or (handler_record.queue_policy if handler_record else None)
-                or agent_queue_policy
-            )
-            if agent_queue_policy == "reject" and agent_at_capacity:
-                raise QueueCapacityExceeded("Agent concurrency is exhausted")
-            if handler_queue_policy == "reject" and handler_at_capacity:
-                raise QueueCapacityExceeded(
-                    f"Handler {selected_handler!r} concurrency is exhausted"
+            if start_running:
+                if active_agent >= max_concurrency:
+                    raise QueueCapacityExceeded("Agent concurrency is exhausted")
+                if active_handler >= handler_limit:
+                    raise QueueCapacityExceeded(
+                        f"Handler {selected_handler!r} concurrency is exhausted"
+                    )
+            else:
+                agent_at_capacity = active_agent + pending_agent >= max_concurrency
+                handler_at_capacity = active_handler + pending_handler >= handler_limit
+                agent_queue_policy = str(invocation.get("queue_policy", "queue"))
+                handler_queue_policy = str(
+                    handler_override.get("queue_policy")
+                    or (handler_record.queue_policy if handler_record else None)
+                    or agent_queue_policy
                 )
-            agent_queue_capacity = int(invocation.get("queue_capacity", 0))
-            configured_handler_capacity = handler_override.get("queue_capacity")
-            if configured_handler_capacity is None:
-                configured_handler_capacity = (
-                    handler_record.queue_capacity
-                    if handler_record and handler_record.queue_capacity is not None
-                    else agent_queue_capacity
+                if agent_queue_policy == "reject" and agent_at_capacity:
+                    raise QueueCapacityExceeded("Agent concurrency is exhausted")
+                if handler_queue_policy == "reject" and handler_at_capacity:
+                    raise QueueCapacityExceeded(
+                        f"Handler {selected_handler!r} concurrency is exhausted"
+                    )
+                agent_queue_capacity = int(invocation.get("queue_capacity", 0))
+                configured_handler_capacity = handler_override.get("queue_capacity")
+                if configured_handler_capacity is None:
+                    configured_handler_capacity = (
+                        handler_record.queue_capacity
+                        if handler_record and handler_record.queue_capacity is not None
+                        else agent_queue_capacity
+                    )
+                handler_queue_capacity = int(configured_handler_capacity)
+                agent_full = active_agent + pending_agent >= max_concurrency + agent_queue_capacity
+                handler_full = (
+                    active_handler + pending_handler >= handler_limit + handler_queue_capacity
                 )
-            handler_queue_capacity = int(configured_handler_capacity)
-            agent_full = active_agent + pending_agent >= max_concurrency + agent_queue_capacity
-            handler_full = (
-                active_handler + pending_handler >= handler_limit + handler_queue_capacity
-            )
-            if agent_queue_policy == "queue" and agent_full:
-                raise QueueCapacityExceeded("Agent Run queue capacity is exhausted")
-            if handler_queue_policy == "queue" and handler_full:
-                raise QueueCapacityExceeded(
-                    f"Handler {selected_handler!r} Run queue capacity is exhausted"
-                )
+                if agent_queue_policy == "queue" and agent_full:
+                    raise QueueCapacityExceeded("Agent Run queue capacity is exhausted")
+                if handler_queue_policy == "queue" and handler_full:
+                    raise QueueCapacityExceeded(
+                        f"Handler {selected_handler!r} Run queue capacity is exhausted"
+                    )
 
             now = utcnow()
             configured_timeout = int(invocation.get("timeout_seconds", 900))
@@ -784,7 +792,7 @@ class RunService:
     async def dispatch_available(self) -> int:
         """Dispatch FIFO queued Runs while Agent and Handler slots remain available."""
 
-        dispatched = 0
+        dispatched = await self._retry_resident_dispatches()
         with self.database.session() as session:
             agent_ids = list(
                 session.scalars(
@@ -892,6 +900,13 @@ class RunService:
                         else:
                             needs_runtime = False
                             _transition(selected, "dispatching")
+                            selected.runtime_instance_id = instance.runtime_instance_id
+                            selected.log_url, selected.trace_url = self.runtime._operator_urls(
+                                definition_snapshot,
+                                agent_id=agent_id,
+                                runtime_instance_id=instance.runtime_instance_id,
+                                run=selected,
+                            )
                     else:
                         needs_runtime = False
                         _transition(selected, "dispatching")
@@ -912,42 +927,100 @@ class RunService:
                     else:
                         if instance is None:
                             break
-                        await self.runtime.dispatch_resident(detached, instance)
-                        with self.database.session() as session:
-                            accepted = session.get(Run, run_id)
-                            if accepted and accepted.status == "dispatching":
-                                accepted.runtime_instance_id = instance.runtime_instance_id
-                                accepted.log_url, accepted.trace_url = self.runtime._operator_urls(
-                                    definition_snapshot,
-                                    agent_id=agent_id,
-                                    runtime_instance_id=instance.runtime_instance_id,
-                                    run=accepted,
-                                )
-                                _transition(accepted, "running")
+                        await self.runtime.publish(
+                            "run", {"run_id": run_id, "status": "dispatching"}
+                        )
+                        await self._submit_resident_run(run_id, instance.runtime_instance_id)
                     dispatched += 1
-                    published_status = "dispatching" if mode == "ephemeral" else "running"
+                    with self.database.session() as session:
+                        current = session.get(Run, run_id)
+                        published_status = current.status if current else "dispatching"
                     await self.runtime.publish(
                         "run", {"run_id": run_id, "status": published_status}
                     )
+                except RuntimeDispatchUncertain:
+                    # The Agent may have started the Run before the response was lost. Keep
+                    # the durable assignment and retry the idempotent submission next poll.
+                    break
                 except (RuntimeOperationError, StorageQuotaExceeded) as exc:
-                    with self.database.session() as session:
-                        definition = lock_agent_definition(session, agent_id)
-                        if definition is None:
-                            break
-                        failed = session.get(Run, run_id)
-                        if failed and failed.status not in TERMINAL_RUN_STATUSES:
-                            _transition(failed, "failed")
-                            error = {
-                                "type": "dispatch_failed",
-                                "message": "Runtime dispatch failed",
-                                "retryable": False,
-                                "details": {},
-                            }
-                            self.storage.set_internal_run_error(failed, error)
+                    self._fail_dispatch(run_id, agent_id)
                     await self.runtime.publish("run", {"run_id": run_id, "status": "failed"})
                     if isinstance(exc, StorageQuotaExceeded):
                         break
         return dispatched
+
+    async def _retry_resident_dispatches(self) -> int:
+        """Retry resident submissions whose acceptance was not durably observed."""
+
+        with self.database.session() as session:
+            pending = list(
+                session.execute(
+                    select(Run.run_id, Run.agent_id, Run.runtime_instance_id)
+                    .join(
+                        RuntimeInstance,
+                        RuntimeInstance.runtime_instance_id == Run.runtime_instance_id,
+                    )
+                    .where(
+                        Run.status == "dispatching",
+                        RuntimeInstance.status == "ready",
+                        RuntimeInstance.mode == "resident",
+                    )
+                    .order_by(Run.dispatching_at, Run.created_at)
+                )
+            )
+        accepted = 0
+        for run_id, agent_id, instance_id in pending:
+            if not isinstance(instance_id, str):
+                continue
+            try:
+                await self._submit_resident_run(run_id, instance_id)
+                accepted += 1
+                with self.database.session() as session:
+                    current = session.get(Run, run_id)
+                    status = current.status if current else "dispatching"
+                await self.runtime.publish("run", {"run_id": run_id, "status": status})
+            except RuntimeDispatchUncertain:
+                continue
+            except RuntimeOperationError:
+                self._fail_dispatch(run_id, agent_id)
+                await self.runtime.publish("run", {"run_id": run_id, "status": "failed"})
+        return accepted
+
+    async def _submit_resident_run(self, run_id: str, instance_id: str) -> None:
+        """Idempotently submit one durably assigned resident Run and record acceptance."""
+
+        with self.database.session() as session:
+            run = session.get(Run, run_id)
+            instance = session.get(RuntimeInstance, instance_id)
+            if run is None or instance is None:
+                raise RuntimeOperationError("resident dispatch assignment disappeared")
+            if run.status != "dispatching":
+                return
+            detached_run = run
+            detached_instance = instance
+        await self.runtime.dispatch_resident(detached_run, detached_instance)
+        with self.database.session() as session:
+            accepted = session.get(Run, run_id)
+            if accepted is not None and accepted.status == "dispatching":
+                _transition(accepted, "running")
+
+    def _fail_dispatch(self, run_id: str, agent_id: str) -> None:
+        """Persist one proven resident or ephemeral dispatch rejection."""
+
+        with self.database.session() as session:
+            definition = lock_agent_definition(session, agent_id)
+            if definition is None:
+                return
+            failed = session.get(Run, run_id)
+            if failed and failed.status not in TERMINAL_RUN_STATUSES:
+                _transition(failed, "failed")
+                error = {
+                    "type": "dispatch_failed",
+                    "message": "Runtime dispatch failed",
+                    "retryable": False,
+                    "details": {},
+                }
+                self.storage.set_internal_run_error(failed, error)
 
     async def cancel(self, run_id: str, timed_out: bool = False) -> Run:
         """Cancel a non-terminal Run through its assigned Runtime Adapter."""

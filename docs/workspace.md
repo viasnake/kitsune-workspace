@@ -49,9 +49,9 @@ OpenAPI は `/openapi.json`、Swagger UI は開発設定時の `/docs` で確認
 
 ## Queue と同時実行
 
-Agent 全体の `max_concurrency`、`queue_capacity`、`queue_policy` は `spec.invocation` に設定します。Handler ごとの差分は `spec.invocation.handlers.<handler>` に同じ Field を必要な分だけ設定し、省略した Field は Agent 全体の値を使います。`queue` は空きが出るまで Run を保持し、`reject` は即座に容量 Error を返します。容量を超えた要求を黙って破棄しません。
+Agent 全体の `max_concurrency`、`queue_capacity`、`queue_policy` は `spec.invocation` に設定します。Handler ごとの差分は `spec.invocation.handlers.<handler>` に同じ Field を必要な分だけ設定し、省略した Field は Agent 全体の値を使います。Workspace が作る Run では、`queue` は空きが出るまで Run を保持し、`reject` は即座に容量 Error を返します。Agent が開始する `self` / `child` Run は受付後すぐ実行する Protocol のため Queue には入らず、Agent または Handler の実行枠が満杯なら HTTP 429 で拒否します。容量を超えた要求を黙って破棄しません。
 
-Schedule の重複は `allow`、`skip`、`queue`、`replace` から選びます。`replace` は同じ Schedule の前の Run を Cancel して新しい Run を作ります。Cron は Manifest の Timezone で評価し、Misfire Grace を超えた実行を遡って作りません。
+Schedule の重複は `allow`、`skip`、`queue`、`replace` から選びます。`replace` は同じ Schedule の前の Run を Cancel して新しい Run を作ります。Cron は Manifest の Timezone で評価し、Misfire Grace を超えた実行を遡って作りません。長期停止からの復旧時は、古い各 Occurrence を Poll ごとに処理せず、Cursor を現在時刻より後の最初の Occurrence まで進めます。
 
 ## Timeout と Cancel
 
