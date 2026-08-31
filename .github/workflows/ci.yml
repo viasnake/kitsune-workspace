@@ -1,0 +1,226 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python lint, types, and tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+          enable-cache: true
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - run: uv sync --all-packages --all-groups --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - name: Verify the unified Workspace CLI
+        run: uv run kitsune workspace --help
+      - run: uv run pytest -m "not e2e and not postgresql" --cov --cov-report=term-missing --cov-report=xml
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: python-coverage
+          path: coverage.xml
+
+  frontend:
+    name: Frontend lint, types, tests, and build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: "11.21.0"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm web:lint
+      - run: pnpm web:typecheck
+      - run: pnpm web:test
+      - run: pnpm web:build
+      - run: pnpm --dir apps/workspace-web exec playwright install --with-deps chromium
+      - run: pnpm web:test:e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: workspace-web
+          path: apps/workspace-web/dist
+
+  python-artifacts:
+    name: Python distribution artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - run: uv build --all-packages --out-dir dist
+      - run: python tests/artifacts/verify_distributions.py dist
+      - name: Install and exercise the Workspace wheel
+        env:
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/kitsune-tools/bin
+        run: |
+          export PATH="$UV_TOOL_BIN_DIR:$PATH"
+          uv tool install dist/kitsune_workspace-*.whl \
+            --with dist/kitsune_contracts-*.whl \
+            --with dist/kitsune_sdk-*.whl
+          python tests/artifacts/smoke_workspace_install.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: python-distributions-ci
+          path: dist/
+
+  contract-drift:
+    name: Contract drift
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: "11.21.0"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: uv sync --all-packages --all-groups --locked
+      - run: pnpm install --frozen-lockfile
+      - run: uv run python -m kitsune_workspace.openapi --output services/workspace/openapi.json
+      - run: pnpm --dir apps/workspace-web check:api
+      - run: git diff --exit-code -- services/workspace/openapi.json apps/workspace-web/src/api/openapi.generated.ts
+
+  integration-postgresql:
+    name: PostgreSQL integration tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18.6-alpine3.24@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_DB: kitsune_test
+          POSTGRES_USER: kitsune
+          POSTGRES_PASSWORD: kitsune
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kitsune -d kitsune_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      KITSUNE_TEST_POSTGRES_URL: postgresql+psycopg://kitsune:kitsune@127.0.0.1:5432/kitsune_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - run: uv sync --all-packages --all-groups --locked
+      - name: Run isolated PostgreSQL migration and persistence gate
+        run: uv run pytest services/workspace/tests/test_postgresql.py -m postgresql
+
+  compose-e2e:
+    name: Docker Compose E2E
+    runs-on: ubuntu-24.04
+    env:
+      KITSUNE_COMPOSE_E2E: "1"
+      KITSUNE_E2E_RESTART: "1"
+      KITSUNE_E2E_URL: http://127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: "11.21.0"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: uv sync --all-packages --all-groups --locked
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir apps/workspace-web exec playwright install --with-deps chromium
+      - run: docker compose -f deploy/docker-compose.yml up --build --detach --wait
+      - name: Exercise runtime modes, telemetry, and PostgreSQL restart persistence
+        run: uv run pytest tests/e2e/test_compose.py -m e2e
+      - name: Start a Manual Run through the live Web UI
+        run: pnpm --dir apps/workspace-web exec playwright test tests/e2e/live-compose.spec.ts
+      - name: Capture PostgreSQL wait state
+        if: failure()
+        run: |
+          docker compose -f deploy/docker-compose.yml exec -T postgres \
+            psql -U kitsune -d kitsune -P pager=off -x -c \
+            "SELECT pid, state, wait_event_type, wait_event, xact_start, query_start, pg_blocking_pids(pid) AS blocking_pids, query FROM pg_stat_activity WHERE datname = 'kitsune' ORDER BY backend_start, pid;"
+      - if: always()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color
+      - if: always()
+        run: docker compose -f deploy/docker-compose.yml down --volumes
+
+  image:
+    name: Workspace image build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: deploy/Dockerfile.workspace
+          push: false
+          tags: kitsune-workspace:ci
+
+  security:
+    name: Secret and dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.8"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: "11.21.0"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: uv export --all-packages --no-emit-workspace --format requirements-txt --no-hashes --output-file /tmp/kitsune-requirements.txt
+      - run: uvx pip-audit --requirement /tmp/kitsune-requirements.txt
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high

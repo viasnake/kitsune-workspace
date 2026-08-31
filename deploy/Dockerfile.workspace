@@ -1,0 +1,35 @@
+FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS web-build
+
+RUN npm install --global pnpm@11.21.0
+WORKDIR /source
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/workspace-web/package.json apps/workspace-web/package.json
+RUN pnpm install --frozen-lockfile
+COPY apps/workspace-web apps/workspace-web
+RUN pnpm web:build
+
+FROM ghcr.io/astral-sh/uv:0.11.8@sha256:3b7b60a81d3c57ef471703e5c83fd4aaa33abcd403596fb22ab07db85ae91347 AS uv
+
+FROM python:3.12.14-slim@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a AS runtime
+
+ENV PATH="/opt/kitsune/.venv/bin:${PATH}" \
+    KITSUNE_WORKSPACE_CONFIG=/etc/kitsune/workspace.toml \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+COPY --from=uv /uv /uvx /usr/local/bin/
+WORKDIR /opt/kitsune
+COPY pyproject.toml uv.lock ./
+COPY packages packages
+COPY services/workspace services/workspace
+RUN uv sync --frozen --no-dev --package kitsune-workspace
+
+COPY --from=web-build /source/apps/workspace-web/dist /opt/kitsune/static
+COPY deploy/workspace.example.toml /etc/kitsune/workspace.toml
+COPY deploy/workspace-entrypoint.sh /usr/local/bin/workspace-entrypoint
+
+EXPOSE 8080
+ENTRYPOINT ["workspace-entrypoint"]
+CMD ["kitsune", "workspace", "serve", "--config", "/etc/kitsune/workspace.toml"]

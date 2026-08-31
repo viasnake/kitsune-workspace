@@ -1,0 +1,163 @@
+import type { AgentDetail, AgentSummary, AuthSession, KitsuneEvent, Run } from "../../src/api/generated";
+
+export const operatorSession: AuthSession = {
+  subject: "operator@example.invalid",
+  name: "Kitsune Operator",
+  roles: ["operator"],
+  csrf_token: "csrf-token",
+};
+
+export const viewerSession: AuthSession = {
+  subject: "viewer@example.invalid",
+  name: "Kitsune Viewer",
+  roles: ["viewer"],
+  csrf_token: "viewer-csrf",
+};
+
+export const runningRun: Run = {
+  run_id: "run-00000001",
+  agent_id: "sre-agent",
+  runtime_instance_id: "runtime-0001",
+  handler: "investigate",
+  source: "on_demand",
+  trigger_id: "manual",
+  parent_run_id: null,
+  correlation_id: "correlation-001",
+  trace_id: "abc123",
+  status: "running",
+  input: { message: "database latency" },
+  output: null,
+  created_at: "2026-08-24T01:00:00Z",
+  queued_at: "2026-08-24T01:00:01Z",
+  started_at: "2026-08-24T01:00:02Z",
+  ended_at: null,
+  deadline: "2026-08-24T01:15:00Z",
+  error: null,
+  usage: [],
+  log_url: "https://logs.example.invalid/run-1",
+  trace_url: "https://traces.example.invalid/abc123",
+  children: [],
+};
+
+export const runEvent: KitsuneEvent = {
+  event_id: "event-1",
+  type: "kitsune.run.progress",
+  occurred_at: "2026-08-24T01:00:03Z",
+  received_at: "2026-08-24T01:00:03Z",
+  agent_id: "sre-agent",
+  runtime_instance_id: "runtime-0001",
+  run_id: runningRun.run_id,
+  parent_run_id: null,
+  correlation_id: runningRun.correlation_id,
+  trace_id: runningRun.trace_id,
+  severity: "info",
+  payload: { message: "collecting evidence", progress: 0.4 },
+};
+
+export const agentSummary: AgentSummary = {
+  agent_id: "sre-agent",
+  display_name: "SRE Agent",
+  description: "Investigates production incidents",
+  version: "1.4.2",
+  runtime_adapter: "process",
+  runtime_mode: "resident",
+  desired_state: "running",
+  actual_state: "ready",
+  last_heartbeat: "2026-08-24T01:00:00Z",
+  active_runs: 1,
+  last_run: runningRun,
+  labels: { domain: "sre", environment: "production" },
+};
+
+export const agentDetail: AgentDetail = {
+  ...agentSummary,
+  manifest: {
+    schema: "kitsune.agent",
+    revision: 1,
+    metadata: { id: "sre-agent", display_name: "SRE Agent", description: "Investigates production incidents" },
+    spec: {
+      runtime: {
+        adapter: "process",
+        mode: "resident",
+        desired_state: "running",
+        process: { command: ["python", "-m", "sre_agent"] },
+      },
+      invocation: {
+        default_handler: "investigate",
+        timeout_seconds: 900,
+        cancellation_grace_seconds: 10,
+        max_concurrency: 4,
+        queue_capacity: 20,
+        queue_policy: "queue",
+        retention_days: 30,
+        store_input: true,
+        store_output: true,
+      },
+      observability: { service_name: "sre-agent", log_url_template: "", trace_url_template: "" },
+      security: { agent_token_ref: "env:KITSUNE_AGENT_TOKEN" },
+    },
+  },
+  descriptor: {
+    agent_id: "sre-agent",
+    application_version: "1.4.2",
+    sdk_version: "1.0.0",
+    framework: "pydantic-ai",
+    build_revision: "abc123456789",
+    started_at: "2026-08-24T00:00:00Z",
+    handlers: [],
+    plugins: [],
+  },
+  handlers: [
+    {
+      name: "investigate",
+      description: "Investigate an operational symptom",
+      input_schema: {
+        type: "object",
+        required: ["message"],
+        properties: {
+          message: { type: "string", title: "調査内容", description: "調べる事象" },
+          max_results: { type: "integer", title: "最大件数", default: 10, minimum: 1 },
+          include_history: { type: "boolean", title: "履歴を含める", default: false },
+        },
+      },
+      output_schema: { type: "object", properties: { summary: { type: "string" } } },
+      default_timeout_seconds: 900,
+      max_concurrency: 4,
+      queue_capacity: 20,
+      queue_policy: "queue",
+    },
+  ],
+  plugins: [{ name: "budget", version: "1.0.0", critical: true, status: "reported", error: null }],
+  runtime_instances: [
+    {
+      runtime_instance_id: "runtime-0001",
+      agent_id: "sre-agent",
+      adapter: "process",
+      mode: "resident",
+      status: "ready",
+      pid: 4210,
+      container_id: null,
+      endpoint: "https://agent.example.invalid",
+      control_url: "https://agent.example.invalid/_kitsune",
+      health_url: "https://agent.example.invalid/_kitsune/healthz",
+      log_url: null,
+      trace_url: "https://traces.example.invalid/runtime-1",
+      restart_attempts: 0,
+      started_at: "2026-08-24T00:00:00Z",
+      ready_at: "2026-08-24T00:00:02Z",
+      stopped_at: null,
+      last_heartbeat_at: "2026-08-24T01:00:00Z",
+      last_exit_code: null,
+      last_error: null,
+      metadata: {},
+    },
+  ],
+  triggers: [
+    { trigger_id: "manual", agent_id: "sre-agent", type: "on_demand", handler: "investigate", enabled: true, cron: null, timezone: null, overlap: null },
+  ],
+  schedules: [],
+  usage: [],
+  health: { status: "healthy", heartbeat_age_seconds: 5, checks: [{ name: "control_api", status: "healthy", detail: "ready" }] },
+  log_url: null,
+  trace_url: "https://traces.example.invalid/agent",
+};

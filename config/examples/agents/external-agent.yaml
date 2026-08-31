@@ -1,0 +1,49 @@
+schema: kitsune.agent
+revision: 1
+
+metadata:
+  id: external-agent
+  display_name: External Agent
+  description: Resident Agent whose process lifecycle is owned outside Workspace.
+  labels:
+    example: external
+
+spec:
+  runtime:
+    adapter: external
+    mode: resident
+    desired_state: running
+    restart:
+      policy: never
+      max_attempts: 0
+      backoff_seconds: 0
+      max_backoff_seconds: 0
+      reset_after_seconds: 60
+    external:
+      endpoint: http://external-agent:8103
+      heartbeat_timeout_seconds: 30
+    environment: {}
+    secrets: {}
+  invocation:
+    default_handler: receive
+    max_concurrency: 2
+    queue_capacity: 10
+    queue_policy: queue
+    timeout_seconds: 30
+    cancellation_grace_seconds: 5
+    store_input: true
+    store_output: true
+    retention_days: 30
+  triggers:
+    - id: manual
+      type: on_demand
+      handler: receive
+    - id: agent-owned
+      type: self
+      handler: receive
+  observability:
+    service_name: external-agent
+    trace_url_template: ""
+    log_url_template: ""
+  security:
+    agent_token_ref: env://KITSUNE_EXTERNAL_AGENT_TOKEN

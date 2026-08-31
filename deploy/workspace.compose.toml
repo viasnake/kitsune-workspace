@@ -1,0 +1,79 @@
+[workspace]
+name = "compose"
+bind = "127.0.0.1:8080"
+public_url = "http://127.0.0.1:8080"
+agent_url = "http://workspace-human-gateway:18081"
+database_url = "postgresql+psycopg://kitsune:kitsune@postgres:5432/kitsune"
+agent_manifest_directory = "/etc/kitsune/agents"
+runtime_state_directory = "/var/lib/kitsune/runtime"
+static_directory = "/opt/kitsune/static"
+
+[auth]
+mode = "none"
+secure_cookie = false
+
+[events]
+retention_days = 30
+audit_retention_days = 90
+runtime_retention_days = 30
+max_payload_bytes = 1048576
+max_input_bytes = 1048576
+max_output_bytes = 1048576
+max_runs_per_agent = 10000
+max_events_per_agent = 100000
+max_runtime_instances_per_agent = 1000
+max_active_runtime_instances_per_agent = 5
+max_events_per_run = 10000
+max_reserved_json_bytes_per_agent = 268435456
+max_run_timeout_seconds = 86400
+retention_batch_size = 500
+retention_batch_bytes = 8388608
+
+[scheduler]
+poll_interval_seconds = 1
+heartbeat_timeout_seconds = 30
+lock_ttl_seconds = 15
+cancel_grace_seconds = 5
+retention_interval_seconds = 60
+runtime_startup_timeout_seconds = 120
+runtime_probe_batch_size = 100
+runtime_probe_concurrency = 10
+runtime_probe_cycle_timeout_seconds = 5
+runtime_probe_backoff_max_seconds = 60
+
+[security]
+allow_insecure_external_agents = true
+allow_insecure_agent_network = true
+docker_socket = "/var/run/docker.sock"
+managed_outbox_max_bytes = 67108864
+docker_outbox_archive_max_bytes = 285212672
+docker_outbox_archive_max_members = 64
+docker_outbox_member_max_bytes = 134217728
+docker_outbox_total_max_bytes = 268435456
+docker_log_response_max_bytes = 2097152
+docker_archived_logs_max_bytes = 33554432
+docker_archived_log_containers = 100
+process_log_line_max_bytes = 65536
+process_live_logs_max_bytes = 2097152
+process_archived_logs_max_bytes = 33554432
+process_archived_log_instances = 100
+webhook_rate_limit = 120
+api_rate_limit = 1200
+sse_max_connections = 100
+sse_max_connections_per_principal = 5
+sse_max_connections_per_ip = 10
+redacted_keys = [
+  "authorization",
+  "api_key",
+  "apikey",
+  "client_secret",
+  "cookie",
+  "password",
+  "secret",
+  "set-cookie",
+  "token",
+]
+
+[observability]
+service_name = "kitsune-workspace"
+otlp_endpoint = "http://otel-collector:4318"

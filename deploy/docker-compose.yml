@@ -1,0 +1,197 @@
+name: kitsune
+
+x-hardened: &hardened
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+
+services:
+  postgres:
+    <<: *hardened
+    cap_add: [CHOWN, DAC_READ_SEARCH, FOWNER, SETGID, SETUID]
+    image: postgres:18.6-alpine3.24@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    environment:
+      POSTGRES_DB: kitsune
+      POSTGRES_USER: kitsune
+      POSTGRES_PASSWORD: kitsune
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U kitsune -d kitsune]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      kitsune-data-network:
+        ipv4_address: 172.31.240.20
+
+  otel-collector:
+    <<: *hardened
+    image: otel/opentelemetry-collector-contrib:0.159.0@sha256:1f2c54a30e713fac6b3ae77a1ec84010c2007e29ced8ec666214fc2f6739c1cc
+    command: [--config=/etc/otelcol-contrib/config.yaml]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      kitsune-agent-network:
+        ipv4_address: 172.31.242.20
+
+  workspace:
+    <<: *hardened
+    restart: on-failure
+    container_name: kitsune-workspace
+    image: kitsune-workspace:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.workspace
+    command: [kitsune, workspace, serve, --config, /etc/kitsune/workspace.toml]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      workspace-human-gateway:
+        condition: service_started
+    network_mode: service:workspace-human-gateway
+    environment:
+      KITSUNE_WORKSPACE_CONFIG: /etc/kitsune/workspace.toml
+      KITSUNE_MANAGED_AGENT_TOKEN: kt_compose_managed_agent
+      KITSUNE_EPHEMERAL_AGENT_TOKEN: kt_compose_ephemeral_agent
+      KITSUNE_EXTERNAL_AGENT_TOKEN: kt_compose_external_agent
+      KITSUNE_AGENT_PYTHONPATH: .
+      KITSUNE_SHUTDOWN_GRACE_SECONDS: "3"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_BSP_SCHEDULE_DELAY: "500"
+      OTEL_METRIC_EXPORT_INTERVAL: "1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    volumes:
+      - ./workspace.compose.toml:/etc/kitsune/workspace.toml:ro
+      - ../config/examples/agents:/etc/kitsune/agents:ro
+      - workspace-runtime-data:/var/lib/kitsune/runtime
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=2)"
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  workspace-human-gateway:
+    <<: *hardened
+    image: alpine/socat:1.8.1.3@sha256:3d9e7966201dd3a065df591020a09fd3c70845de7e7086e3531ea69db774406b
+    ports:
+      - 127.0.0.1:8080:18080
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=4m
+    command:
+      - TCP-LISTEN:18080,fork,reuseaddr,bind=172.31.241.10
+      - TCP:127.0.0.1:8080
+    healthcheck:
+      test: [CMD-SHELL, nc -z 172.31.241.10 18080]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+    networks:
+      kitsune-human-network:
+        gw_priority: 1
+        ipv4_address: 172.31.241.10
+      kitsune-data-network:
+        ipv4_address: 172.31.240.10
+      kitsune-agent-network:
+        ipv4_address: 172.31.242.10
+
+  workspace-agent-gateway:
+    <<: *hardened
+    image: nginx:1.30.4-alpine3.24@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46
+    user: 101:101
+    network_mode: service:workspace-human-gateway
+    depends_on:
+      workspace:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      - ./agent-gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./agent-proxy.inc:/etc/nginx/agent-proxy.inc:ro
+    healthcheck:
+      test: [CMD-SHELL, nc -z 172.31.242.10 18081]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+
+  external-agent:
+    <<: *hardened
+    image: kitsune-example-agent:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.agent
+    working_dir: /opt/kitsune/examples/external-agent
+    command: [kitsune, agent, serve, app:app]
+    depends_on:
+      workspace-agent-gateway:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: .
+      KITSUNE_WORKSPACE_URL: http://workspace-human-gateway:18081
+      KITSUNE_ALLOW_INSECURE_WORKSPACE: "true"
+      KITSUNE_AGENT_TOKEN: kt_compose_external_agent
+      KITSUNE_CONTROL_URL: http://external-agent:8103
+      KITSUNE_BIND_HOST: 0.0.0.0
+      KITSUNE_BIND_PORT: "8103"
+      KITSUNE_OUTBOX_PATH: /var/lib/kitsune/events.sqlite3
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_BSP_SCHEDULE_DELAY: "500"
+      OTEL_METRIC_EXPORT_INTERVAL: "1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    volumes:
+      - external-agent-data:/var/lib/kitsune
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8103/_kitsune/readyz', timeout=2)"
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks:
+      kitsune-agent-network:
+        ipv4_address: 172.31.242.30
+
+volumes:
+  postgres-data:
+  workspace-runtime-data:
+  external-agent-data:
+
+networks:
+  kitsune-data-network:
+    name: kitsune-data-network
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.240.0/24
+  kitsune-human-network:
+    name: kitsune-human-network
+    ipam:
+      config:
+        - subnet: 172.31.241.0/24
+  kitsune-agent-network:
+    name: kitsune-agent-network
+    ipam:
+      config:
+        - subnet: 172.31.242.0/24
